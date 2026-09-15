@@ -1,0 +1,159 @@
+{# One template serves the initial form and the response. main.py supplies its context values. #}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gratify — Find funding</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}">
+  <script src="{{ url_for('static', path='/app.js') }}" defer></script>
+</head>
+<body>
+<main>
+  <header>
+    <p class="brand">Gratify <span class="badge">Learning MVP</span></p>
+    <h1>Find funding for your next project</h1>
+    <p>Describe your business and what you want to build. Get a ranked shortlist with clear explanations.</p>
+  </header>
+  <aside class="notice">Demo only: all 12 programmes, deadlines and source links are fictional.
+    Eligibility uses simplified rules; an AI relevance score is not a probability of funding.</aside>
+  <form id="funding-form" action="/match" method="post">
+    <label for="description">Your company and project</label>
+    <p id="description-help" class="muted">Include country, company size (SME or large), industry, project goal and total budget in EUR.
+      For this demo, the project budget must fit the programme's funding range.</p>
+    <textarea id="description" name="description" rows="6" required minlength="20" maxlength="5000"
+      aria-describedby="description-help"
+      placeholder="Polish manufacturing SME with 35 employees. We want funding to improve energy efficiency in our factory. Estimated project cost is EUR 150,000.">{{ description | default('') }}</textarea>
+    <p class="muted">Your description is processed by your local Ollama model for extraction and scoring. Searches are not saved locally.</p>
+    <button id="submit-button" type="submit">
+      <span class="spinner" aria-hidden="true"></span>
+      <span class="button-label">Find funding</span>
+    </button>
+    <span class="muted">Local AI matching may take up to two minutes.</span>
+    <p id="loading-status" class="loading-status" role="status" aria-live="polite" hidden>
+      Checking eligibility and asking the local model to rank the matches. Please wait…
+    </p>
+  </form>
+
+  {# Optional sections appear only when the route supplies the corresponding data. #}
+  {% if errors %}
+  <section class="error" role="alert">
+    <h2>Could not complete matching</h2>
+    <ul>{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul>
+  </section>
+  {% endif %}
+
+  {% if profile %}
+  <details class="profile" open>
+    <summary>Extracted profile — check how your description was understood</summary>
+    <dl>{% for key, value in profile.items() %}
+      <div>
+        <dt>{{ key | replace('_', ' ') | capitalize }}</dt>
+        <dd>
+          {% if value is none %}Not provided
+          {% elif key in ['company_size', 'currency'] %}{{ value | upper }}
+          {% elif value is string %}{{ value | replace('_', ' ') | capitalize }}
+          {% else %}{{ value }}{% endif %}
+        </dd>
+      </div>
+    {% endfor %}</dl>
+    <p class="muted">If a detail is wrong, edit the description above and search again.</p>
+  </details>
+  {% endif %}
+
+  {# An empty results list means matching finished with no survivors; undefined means no results yet. #}
+  {% if results is defined %}
+  <section aria-labelledby="results-title">
+    <h2 id="results-title">{{ results | length }} eligible opportunities</h2>
+    <p class="muted">Hard eligibility is checked separately from how closely each programme matches the project.</p>
+    {% for result in results %}
+    {% set grant = result.grant %}
+    <article class="card funding-card tone-{{ result.relevance.tone }}">
+      <div class="card-heading">
+        <div>
+          <p class="card-eyebrow">Opportunity {{ loop.index }} · Mock programme</p>
+          <h3>{{ grant.title }}</h3>
+          <p class="card-description">{{ grant.description }}</p>
+        </div>
+        <div class="score-panel" aria-label="Relevance score: {{ result.relevance.score }}/100">
+          <span>Relevance score</span>
+          <strong>{{ result.relevance.score }}<small>/100</small></strong>
+          <span class="fit-label">{{ result.relevance.label }}</span>
+        </div>
+      </div>
+      <dl class="grant-meta">
+        <div><dt>Funding range</dt><dd>EUR {{ '{:,.0f}'.format(grant.minimum_funding) }}–{{ '{:,.0f}'.format(grant.maximum_funding) }}</dd></div>
+        <div><dt>Application deadline</dt><dd>{{ grant.deadline }}</dd></div>
+      </dl>
+
+      <section class="eligibility-section" aria-label="Eligibility checks">
+        <div class="section-heading"><h4>Eligibility</h4><span class="eligibility-badge">All demo checks passed</span></div>
+        <p class="muted">These requirements determine eligibility and add no relevance points.</p>
+        <ul class="eligibility-checks">
+          {% for check in result.eligibility.checks %}
+          <li><span aria-hidden="true">✓</span><strong>{{ check.label }}:</strong> {{ check.status }}</li>
+          {% endfor %}
+        </ul>
+      </section>
+
+      <section class="relevance-section" aria-label="Relevance breakdown">
+        <h4>How well does it match?</h4>
+        <p class="muted">Project fit carries the most weight. A grant can pass every eligibility check and still be a weak match.</p>
+      <div class="score-breakdown" aria-label="Relevance score breakdown">
+        {% for label, factor, weight in result.relevance.breakdown %}
+        <div class="factor tone-{{ factor.tone }}">
+          <div class="factor-heading">
+            <div><strong>{{ label }}</strong><span class="factor-weight">{{ weight }}% of score</span></div>
+            <span class="factor-label">{{ factor.label if label != 'Funding fit' else factor.label | replace('match', 'fit') }}</span>
+          </div>
+          <dl class="factor-comparison">
+            <div><dt>Your company / project</dt><dd>{{ factor.company_need }}</dd></div>
+            <div><dt>This programme supports</dt><dd>{{ factor.grant_support }}</dd></div>
+          </dl>
+          <p class="factor-explanation"><strong>{{ 'Mismatch / uncertainty' if factor.score < 75 else 'Why it fits' }}:</strong> {{ factor.explanation }}</p>
+          {% if factor.improvement %}<p class="factor-next-step"><strong>What could help:</strong> {{ factor.improvement }}</p>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      <details class="score-calculation">
+        <summary>How the score is calculated</summary>
+        <p>Local AI estimates each factor; fixed weights determine its contribution.</p>
+        <ul>
+          {% for label, factor, weight in result.relevance.breakdown %}
+          <li><span>{{ label }}: {{ factor.score }} × {{ weight }}%</span><strong>{{ '%.2f' | format(factor.score * weight / 100) }} points</strong></li>
+          {% endfor %}
+        </ul>
+        <p>Weighted total: <strong>{{ '%.2f' | format(result.relevance.weighted_score) }}/100</strong>. Rounded to a whole number; 100 requires every factor to be 100.</p>
+        {% if result.relevance.missing_information %}<p class="confidence-note">Important information is missing, so the final score is capped at 94/100.</p>{% endif %}
+        <p><strong>Final relevance score: {{ result.relevance.score }}/100</strong></p>
+      </details>
+      </section>
+      {% if result.relevance.missing_information %}
+      <aside class="missing-info">
+      <strong>Worth clarifying</strong>
+      <p>These details could change the assessment.</p>
+      <ul>{% for item in result.relevance.missing_information %}<li>{{ item }}</li>{% endfor %}</ul>
+      </aside>
+      {% else %}<p class="positive-note">No critical information appears to be missing.</p>{% endif %}
+      <footer class="card-footer"><span>AI assessment · Not a funding guarantee</span><a href="{{ grant.source_url }}" target="_blank" rel="noopener noreferrer">Mock source (placeholder) ↗</a></footer>
+    </article>
+    {% else %}
+    <p class="notice">No sample programmes pass the eligibility rules for this profile. See the reasons below.</p>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if excluded %}
+  <details>
+    <summary>{{ excluded | length }} excluded opportunities — eligibility reasons</summary>
+    {% for item in excluded %}
+    <article><h3>{{ item.grant.title }}</h3>
+      <p class="muted">Ineligible under demo rules. Relevance was not scored.</p>
+      <ul>{% for reason in item.reasons %}<li>{{ reason }}</li>{% endfor %}</ul>
+    </article>
+    {% endfor %}
+  </details>
+  {% endif %}
+</main>
+</body>
+</html>
