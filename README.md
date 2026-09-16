@@ -80,7 +80,7 @@ at the main transitions.
    `seed_grants()` in `app/seed.py` inserts the fictional examples once.
 6. **Follow the response into `app/templates/index.html`:** the route's
    `context` dictionary supplies the profile, results, exclusions and errors.
-   `app/static/app.js` shows the waiting state while the browser submits the form.
+   `app/static/app.js` shows extraction, profile chips and comparison progress before revealing the results.
 7. **Use the tests as worked examples:** start with `tests/test_matching.py`,
    then `tests/test_llm.py`, then `tests/test_app.py`. A fixture is reusable test
    setup, `parametrize` repeats a test for several inputs, and `monkeypatch`
@@ -110,7 +110,7 @@ or funding approval.”
 | `app/llm.py` | Contains the only external integration and both prompts. A small shared helper avoids repeating API setup and error handling. | Description → profile; description + profile + eligible grants → three explained relevance factors per grant. API/validation problems → user-readable `LLMError`. |
 | `app/templates/index.html` | Jinja2 fills one HTML page with form values, the extracted profile, results and excluded grants. Text is escaped automatically. | Route context → HTML the browser can display. |
 | `app/static/style.css` | Adds basic spacing, colours, responsive layout, focus outlines and the loading spinner animation. | HTML elements → readable presentation. |
-| `app/static/app.js` | Shows immediate feedback while the form waits for the server. It disables repeat submissions, changes the button label and reveals a status message. | Form submission → temporary loading state until the response page arrives. |
+| `app/static/app.js` | Enhances the form with a short matching sequence. It highlights verified excerpts from the input, builds chips from the extracted profile, and reveals the server-rendered shortlist. | One streamed form request → profile progress → results or a readable error. |
 | `tests/conftest.py` | Provides reusable example inputs for tests. | Test request → independent sample profile and grant. |
 | `tests/test_matching.py` | Checks hard rules, inclusive boundaries, missing inputs, relevance separation and ranking. | Known inputs → assertions against expected decisions. |
 | `tests/test_app.py` | Checks the form-to-results flow using an isolated in-memory SQLite database and mocked AI functions. | Test HTTP requests → verified HTML, filtering order and error handling. |
@@ -124,15 +124,17 @@ Country, company-size, industry and project-type lists are stored in SQLite JSON
 
 ## Lifecycle of one request
 
-1. The user presses **Find funding**. A small script immediately disables the button, shows a spinner and reveals a waiting message. The browser then sends the textarea as a normal form POST to `/match`. There is no JavaScript framework or separate API client.
+1. The user presses **Find funding**. A small script disables the button and shows the original description while extraction runs. It posts the form to `/match` with `Accept: application/x-ndjson`. The same route also supports ordinary HTML submissions when JavaScript is unavailable.
 2. `main.py` strips surrounding whitespace and checks the description length (20–5,000 characters).
-3. `llm.extract_profile()` sends the description to Ollama's local `/api/chat` endpoint. The request includes the JSON schema generated from the `CompanyProfile` Pydantic model. Unknown details should come back as `null`; negative budgets and invalid field values fail validation.
+3. `llm.extract_profile()` sends the description to Ollama's local `/api/chat` endpoint. The request includes the JSON schema generated from the `CompanyProfile` Pydantic model, including optional exact `source_phrases` for highlighting. Unknown details should come back as `null`; negative budgets and invalid field values fail validation. The server sends the extracted profile as one progress event before scoring. The browser highlights only phrases found in the original text, then displays profile chips and a comparison message. The chips reflect the actual extraction, not a keyword-search simulation.
 4. Python checks that country, size, industry, project type, total project budget and currency were provided. Missing details or a non-EUR budget produce a message asking the user to update the description. Employee count is optional. The extracted profile is displayed so the user can spot mistakes.
 5. SQLAlchemy loads the twelve grant rows from SQLite. The database session closes before relevance scoring.
 6. `check_eligibility()` runs on each grant. Country, company size, deadline and budget decide whether it passes. It returns four check statuses for the UI, and every failing rule contributes an explanation. Industry and project type are relevance signals, not hard exclusions in this demo.
 7. `llm.score_grants()` sends **only eligible grants** to Ollama in a single batch. For each grant it returns explained scores for industry match, project goal match and funding fit, plus important missing information. It does not score country, company size or deadline. If none pass eligibility, this API call is skipped.
 8. Pydantic validates every factor score, and Python checks that every expected grant ID appears exactly once. Missing, duplicate and invented IDs cause a readable error instead of a partial or mismatched ranking.
-9. Python combines project fit (60%), industry match (25%) and funding fit (15%). When important information is missing, the overall score cannot exceed 94. Python sorts the final scores highest first, with grant ID as a stable tie-breaker. Jinja2 shows the overall score, company/grant comparisons, mismatch explanations, conditional next steps and an expandable calculation in each card. Eligibility has its own checklist. Excluded grants remain in a separate expandable section with deterministic reasons.
+9. Python combines project fit (60%), industry match (25%) and funding fit (15%). When important information is missing, the overall score cannot exceed 94. Python sorts the final scores highest first, with grant ID as a stable tie-breaker. A final event carries the Jinja2-rendered HTML and result status. The browser reveals compact cards showing the name, score, funding, deadline, eligibility, main reason and top concern. Factor evidence, suggestions and arithmetic stay in a closed “View match details” section. Excluded grants stay in their own expandable section.
+
+The browser uses a single streaming response containing newline-separated JSON events; there are no extra model calls, queues or saved jobs. Errors arrive in the final event and restore the form for retry. The animation adds only short transitions and respects reduced-motion preferences. Missing suggestion values—including model-generated strings such as `"Null"`—are normalized to empty values and never shown as advice.
 
 ### Understanding the relevance score
 

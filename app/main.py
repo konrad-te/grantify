@@ -1,11 +1,12 @@
 """Connect the web form, profile extraction, eligibility checks and ranked results."""
 
 from contextlib import asynccontextmanager
-from typing import Annotated, AsyncIterator
+import json
+from typing import Annotated, AsyncIterator, Iterator
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Form, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
@@ -45,7 +46,21 @@ def home(request: Request) -> HTMLResponse:
 
 
 @app.post("/match", response_class=HTMLResponse)
-def find_funding(request: Request, description: Annotated[str, Form()] = "") -> HTMLResponse:
+def find_funding(request: Request, description: Annotated[str, Form()] = ""):
+    """Serve normal HTML, or progress events for the small browser enhancement."""
+    events = matching_events(request, description)
+    if "application/x-ndjson" in request.headers.get("accept", ""):
+        return StreamingResponse(
+            (json.dumps(event) + "\n" for event in events),
+            media_type="application/x-ndjson",
+            headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
+        )
+    for event in events:
+        if event["type"] == "complete":
+            return HTMLResponse(event["html"], status_code=event["status"])
+
+
+def matching_events(request: Request, description: str) -> Iterator[dict]:
     """Turn a submitted description into a results page.
 
     Validate the text, ask Ollama for a profile, then check that required
@@ -64,7 +79,8 @@ def find_funding(request: Request, description: Annotated[str, Form()] = "") -> 
         else:
             # Extract first, then stop early if the profile is not ready for matching.
             profile = extract_profile(description)
-            context["profile"] = profile.model_dump()
+            context["profile"] = profile.model_dump(exclude={"source_phrases"})
+            yield {"type": "profile", "profile": profile.model_dump()}
             problems = profile_problems(profile)
             if problems:
                 context["errors"] = problems
@@ -101,6 +117,5 @@ def find_funding(request: Request, description: Annotated[str, Form()] = "") -> 
     except SQLAlchemyError:
         context["errors"] = ["Could not read the local grant database. Restart the app and try again."]
         status_code = 503
-    return templates.TemplateResponse(
-        request=request, name="index.html", context=context, status_code=status_code
-    )
+    html = templates.get_template("index.html").render(request=request, **context)
+    yield {"type": "complete", "html": html, "status": status_code}

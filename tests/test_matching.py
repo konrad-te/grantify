@@ -144,3 +144,19 @@ def test_profile_rejects_invalid_budgets(profile, budget):
     """Confirm that Pydantic rejects negative, zero and non-finite project budgets."""
     with pytest.raises(ValidationError):
         CompanyProfile.model_validate({**profile.model_dump(), "project_budget": budget})
+
+
+@pytest.mark.parametrize("empty", [None, "", "   ", "Null", "NULL", "none", "N/A"])
+def test_optional_explanations_remove_placeholder_values(make_relevance_score, empty):
+    data = make_relevance_score(1, 100).model_dump()
+    data["project_type_match"]["improvement"] = empty
+    data["missing_information"] = [empty, "  Confirm the planned equipment.  "]
+    result = RelevanceScore.model_validate(data)
+    assert result.project_type_match.improvement is None
+    assert result.missing_information == ["Confirm the planned equipment."]
+
+
+def test_null_missing_information_does_not_cap_score(make_relevance_score):
+    data = make_relevance_score(1, 100).model_dump()
+    data["missing_information"] = None
+    assert RelevanceScore.model_validate(data).score == 100

@@ -44,19 +44,19 @@ details article { padding-top: 18px; border-top: 1px solid #e2e8f0; margin-top: 
 a { color: #1659a2; }
 
 /* Funding results: keep assessment, evidence and hard requirements easy to scan. */
-.funding-card { --fit-color: #17644d; --fit-bg: #edf7f1; padding: 28px; margin: 28px 0; border-radius: 14px; border-top: 4px solid var(--fit-color); box-shadow: 0 5px 20px rgb(30 41 59 / 5%); }
+.funding-card { --fit-color: #17644d; --fit-bg: #edf7f1; padding: 20px 24px; margin: 16px 0; border-radius: 12px; border-left: 3px solid var(--fit-color); box-shadow: 0 3px 12px rgb(30 41 59 / 4%); }
 .tone-partial { --fit-color: #895709; --fit-bg: #fff6e5; }
 .tone-weak { --fit-color: #a03435; --fit-bg: #fff0ee; }
 .tone-strong { --fit-color: #17644d; --fit-bg: #edf7f1; }
 .funding-card .card-heading { align-items: flex-start; gap: 24px; }
-.funding-card h3 { font-size: 1.35rem; line-height: 1.35; margin-bottom: 8px; }
+.funding-card h3 { font-size: 1.2rem; line-height: 1.35; margin-bottom: 0; }
 .card-eyebrow { margin: 0 0 8px; font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; color: #64748b; font-weight: 650; }
 .card-description { margin: 0; color: #526174; font-size: .92rem; }
-.score-panel { flex-shrink: 0; min-width: 158px; border-radius: 10px; padding: 14px; text-align: center; background: var(--fit-bg); color: var(--fit-color); }
+.score-panel { flex-shrink: 0; min-width: 138px; border-radius: 8px; padding: 8px 12px; text-align: center; background: var(--fit-bg); color: var(--fit-color); }
 .score-panel > span { display: block; font-size: .78rem; font-weight: 650; }
-.score-panel > strong { display: block; font-size: 2.3rem; line-height: 1.4; font-variant-numeric: tabular-nums; }
+.score-panel > strong { display: block; font-size: 1.8rem; line-height: 1.3; font-variant-numeric: tabular-nums; }
 .score-panel small { font-size: 1rem; font-weight: 500; }
-.funding-card .grant-meta { padding: 16px 0; margin: 22px 0 0; gap: 16px 24px; border-block: 1px solid #e7ecf1; }
+.funding-card .grant-meta { padding: 10px 0; margin: 8px 0 0; gap: 8px 24px; }
 .funding-card .grant-meta dd { margin-top: 5px; font-size: .95rem; }
 .section-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
 .eligibility-badge { font-size: .75rem; color: #17644d; background: #edf7f1; padding: 3px 9px; border-radius: 20px; }
@@ -84,8 +84,37 @@ a { color: #1659a2; }
 .card-footer a { font-weight: 600; }
 @media (max-width: 600px) {
   .funding-card { padding: 18px; }
-  .funding-card .card-heading { flex-direction: column; gap: 16px; }
-  .score-panel { width: 100%; }
+  .funding-card .card-heading { gap: 12px; }
+  .score-panel { min-width: 116px; padding: 8px; }
   .funding-card .factor { padding: 14px; }
   .funding-card .factor-comparison { grid-template-columns: 1fr; }
 }
+
+[hidden] { display: none !important; }
+.compact-eligibility { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 6px 0 12px; }
+.compact-eligibility ul { display: flex; flex-wrap: wrap; list-style: none; gap: 4px 12px; padding: 0; margin: 0; font-size: .72rem; color: #526174; }
+.compact-eligibility li > span { color: #17644d; margin-right: 3px; }
+.match-summary { font-size: .88rem; line-height: 1.5; }
+.match-summary p { margin: 8px 0; }
+.match-summary strong { margin-right: 6px; }
+.match-concern { color: #81510d; }
+.funding-card .match-details { padding: 12px 0 0; margin: 12px 0 0; border: 0; border-top: 1px solid #e7ecf1; border-radius: 0; background: transparent; }
+.match-details > summary { color: #165b49; font-size: .85rem; }
+.match-details[open] > summary { margin-bottom: 14px; }
+#matching-output { scroll-margin-top: 20px; outline: none; }
+.matching-progress { margin: 20px 0; padding: 22px; border: 1px solid #cbded7; border-radius: 12px; background: white; }
+.matching-steps { list-style: none; padding: 0; margin: 0 0 20px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; counter-reset: step; }
+.matching-steps li { counter-increment: step; font-size: .78rem; color: #657487; border-top: 3px solid #e5ebe9; padding-top: 8px; }
+.matching-steps li::before { content: counter(step) '. '; }
+.matching-steps .is-current, .matching-steps .is-complete { border-color: #23775b; color: #155443; }
+.matching-steps .is-current { font-weight: 700; }
+#loading-status { font-weight: 600; font-size: .92rem; }
+.highlighted-description { padding: 16px; background: #f7f9fb; border-radius: 8px; font-size: .9rem; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
+.highlighted-description mark { background: #d8efe2; color: #154a39; padding: 2px 0; border-radius: 3px; }
+.profile-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; animation: reveal .25s ease-out; }
+.profile-chip { border: 1px solid #c8dfd3; background: #f0f8f3; color: #155443; border-radius: 20px; padding: 5px 11px; font-size: .83rem; }
+.results-reveal { animation: reveal .3s ease-out; }
+.matching-progress.has-error { border-color: #e5b6b6; }
+@keyframes reveal { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .results-reveal, .profile-chips, .spinner { animation: none; } }
+@media (max-width: 480px) { .matching-steps { grid-template-columns: repeat(2, 1fr); } .grant-meta { grid-template-columns: 1fr; } }

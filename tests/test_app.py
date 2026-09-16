@@ -1,6 +1,7 @@
 """Exercise the web workflow with a temporary database and fake AI responses."""
 
 from unittest.mock import Mock
+import json
 
 import pytest
 from fastapi.testclient import TestClient
@@ -78,8 +79,46 @@ def test_form_filters_before_scoring_and_renders_ranked_results(
     assert "How the score is calculated" in response.text
     assert "Company Project need" in response.text
     assert "Grant Project scope" in response.text
-    assert "Mismatch / uncertainty" in response.text
+    assert "Where it differs" in response.text
     assert "capped at 94/100" in response.text
+    assert '<details class="match-details">' in response.text
+    assert '<details class="match-details" open' not in response.text
+
+
+def test_profile_event_arrives_before_scoring(client, monkeypatch, profile):
+    monkeypatch.setattr(main, "extract_profile", lambda description: profile)
+    scorer = Mock(return_value=[])
+    monkeypatch.setattr(main, "score_grants", scorer)
+    events = main.matching_events(Mock(), "A valid company description for testing")
+    first = next(events)
+    assert first["type"] == "profile"
+    assert first["profile"]["country"] == "Poland"
+    scorer.assert_not_called()
+    events.close()
+
+
+@pytest.mark.parametrize("fail_scoring", [False, True])
+def test_stream_returns_profile_then_results_or_error(client, monkeypatch, profile, make_relevance_score, fail_scoring):
+    monkeypatch.setattr(main, "extract_profile", lambda description: profile)
+    def score(description, extracted, grants):
+        if fail_scoring:
+            raise LLMError("The local model timed out. Please retry.")
+        return [make_relevance_score(grant.id, 80) for grant in grants]
+    monkeypatch.setattr(main, "score_grants", score)
+    response = client.post("/match", data={"description": "Polish manufacturing SME with an energy project."},
+                           headers={"Accept": "application/x-ndjson"})
+    events = [json.loads(line) for line in response.text.splitlines()]
+    assert [event["type"] for event in events] == ["profile", "complete"]
+    assert events[-1]["status"] == (503 if fail_scoring else 200)
+    assert ('timed out' if fail_scoring else '7 eligible opportunities') in events[-1]["html"]
+    assert "What could help:" not in events[-1]["html"]
+
+
+def test_stream_validation_failure(client):
+    response = client.post("/match", data={"description": "short"}, headers={"Accept": "application/x-ndjson"})
+    event = json.loads(response.text)
+    assert event["type"] == "complete"
+    assert event["status"] == 422
 
 
 def test_weak_project_explanation_is_visible_and_escaped(client, monkeypatch, profile, make_relevance_score):

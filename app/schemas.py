@@ -2,7 +2,16 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+def optional_text(value: str | None) -> str | None:
+    """Local models sometimes send the word 'null' instead of JSON null."""
+    if value is not None and not isinstance(value, str):
+        raise ValueError("Expected text or null")
+    if value is None or value.strip().casefold() in {"", "null", "none", "n/a", "not applicable"}:
+        return None
+    return value.strip()
 
 
 class CompanyProfile(BaseModel):
@@ -19,6 +28,7 @@ class CompanyProfile(BaseModel):
     project_type: str | None = Field(min_length=1)
     project_budget: float | None = Field(gt=0, allow_inf_nan=False)
     currency: str | None = Field(description="Explicit ISO currency code, e.g. EUR, or null")
+    source_phrases: list[str] = Field(default_factory=list, description="Exact short excerpts from the original description for the extracted attributes")
 
 
 class EligibilityCheck(BaseModel):
@@ -44,6 +54,11 @@ class RelevanceFactor(BaseModel):
     grant_support: str = Field(min_length=1, description="What this grant explicitly supports")
     explanation: str = Field(min_length=1)
     improvement: str | None = Field(description="Conditional, realistic way to improve fit, or null")
+
+    @field_validator("improvement", mode="before")
+    @classmethod
+    def clean_improvement(cls, value: str | None) -> str | None:
+        return optional_text(value)
 
     @property
     def tone(self) -> str:
@@ -72,6 +87,31 @@ class RelevanceScore(BaseModel):
     project_type_match: RelevanceFactor
     funding_fit: RelevanceFactor
     missing_information: list[str]
+
+    @field_validator("missing_information", mode="before")
+    @classmethod
+    def clean_missing_information(cls, value):
+        if value is None or isinstance(value, str) and optional_text(value) is None:
+            return []
+        if isinstance(value, list):
+            return [cleaned for item in value if (cleaned := optional_text(item))]
+        return value
+
+    @property
+    def main_reason(self) -> str:
+        # Lead with project alignment when present; otherwise surface the best supporting factor.
+        if self.project_type_match.score >= 50:
+            return self.project_type_match.explanation
+        strongest = max((factor for _, factor, _ in self.breakdown), key=lambda factor: factor.score)
+        return strongest.explanation
+
+    @property
+    def main_concern(self) -> str | None:
+        # Project mismatch matters most, followed by the other factors and missing evidence.
+        for _, factor, _ in self.breakdown:
+            if factor.score < 75 and factor.explanation != self.main_reason:
+                return factor.explanation
+        return self.missing_information[0] if self.missing_information else None
 
     @property
     def weighted_score(self) -> float:
