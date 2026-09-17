@@ -2,16 +2,35 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 def optional_text(value: str | None) -> str | None:
     """Local models sometimes send the word 'null' instead of JSON null."""
+    if value is None or value == [] or value == {}:
+        return None
     if value is not None and not isinstance(value, str):
         raise ValueError("Expected text or null")
-    if value is None or value.strip().casefold() in {"", "null", "none", "n/a", "not applicable"}:
+    placeholder = value.strip().casefold().strip("\"'.! ")
+    if placeholder in {
+        "", "null", "none", "nil", "n/a", "na", "not applicable", "[]", "{}",
+        "[ ]", "{ }", "-", "—", "no clarification needed", "no clarification required",
+        "no clarifications needed", "no missing information", "nothing to clarify",
+        "none required", "none needed", "no critical information appears to be missing",
+        "no additional information suggested by the ai",
+    }:
         return None
     return value.strip()
+
+
+def specific_clarification(value: str | None) -> str | None:
+    value = optional_text(value)
+    if value and value.casefold().rstrip(".! ") in {
+        "important information is missing", "information is missing",
+        "missing information", "more information is needed", "needs clarification",
+    }:
+        raise ValueError("Name the uncertain fact and explain why it matters")
+    return value
 
 
 class CompanyProfile(BaseModel):
@@ -26,6 +45,7 @@ class CompanyProfile(BaseModel):
     industry: str | None = Field(min_length=1)
     employees: int | None = Field(ge=0)
     project_type: str | None = Field(min_length=1)
+    project_goal: str | None = Field(default=None, min_length=1, description="Explicit intended outcome of the project, or null")
     project_budget: float | None = Field(gt=0, allow_inf_nan=False)
     currency: str | None = Field(description="Explicit ISO currency code, e.g. EUR, or null")
     source_phrases: list[str] = Field(default_factory=list, description="Exact short excerpts from the original description for the extracted attributes")
@@ -54,11 +74,28 @@ class RelevanceFactor(BaseModel):
     grant_support: str = Field(min_length=1, description="What this grant explicitly supports")
     explanation: str = Field(min_length=1)
     improvement: str | None = Field(description="Conditional, realistic way to improve fit, or null")
+    confidence: Literal["High", "Medium", "Low"] = Field(
+        description="Evidence certainty, separate from fit: High is explicit, Medium has a specific uncertainty, Low has little evidence"
+    )
+    clarification: str | None = Field(
+        description="Name the uncertain fact and explain how it could change the assessment; null when no clarification is needed"
+    )
 
     @field_validator("improvement", mode="before")
     @classmethod
     def clean_improvement(cls, value: str | None) -> str | None:
         return optional_text(value)
+
+    @field_validator("clarification", mode="before")
+    @classmethod
+    def clean_clarification(cls, value: str | None) -> str | None:
+        return specific_clarification(value)
+
+    @model_validator(mode="after")
+    def explain_uncertainty(self):
+        if self.confidence != "High" and not self.clarification:
+            raise ValueError("Medium or Low confidence requires a specific clarification")
+        return self
 
     @property
     def tone(self) -> str:
@@ -67,7 +104,7 @@ class RelevanceFactor(BaseModel):
     @property
     def label(self) -> str:
         """Turn the internal number into a phrase shown to the user."""
-        if self.score >= 90:
+        if self.score == 100 and self.confidence == "High" and not self.clarification:
             return "Exact match"
         if self.score >= 75:
             return "Strong match"
@@ -75,7 +112,7 @@ class RelevanceFactor(BaseModel):
             return "Partial match"
         if self.score >= 25:
             return "Weak match"
-        return "No clear match"
+        return "No match"
 
 
 class RelevanceScore(BaseModel):
@@ -91,15 +128,29 @@ class RelevanceScore(BaseModel):
     @field_validator("missing_information", mode="before")
     @classmethod
     def clean_missing_information(cls, value):
-        if value is None or isinstance(value, str) and optional_text(value) is None:
+        if value is None or value == {} or isinstance(value, str) and optional_text(value) is None:
             return []
         if isinstance(value, list):
-            return [cleaned for item in value if (cleaned := optional_text(item))]
+            return [cleaned for item in value if (cleaned := specific_clarification(item))]
         return value
 
     @property
+    def match_reasons(self) -> list[str]:
+        """Reuse the strongest supported factor explanations without inventing positives."""
+        ranked = sorted(self.breakdown, key=lambda item: (-item[1].score, -item[2]))
+        reasons = {}
+        for _, factor, _ in ranked:
+            if factor.score >= 75 and factor.confidence != "Low":
+                explanation = optional_text(factor.explanation)
+                if explanation:
+                    reasons.setdefault(explanation.casefold().rstrip("."), explanation)
+        return list(reasons.values())[:3]
+
+    @property
     def main_reason(self) -> str:
-        # Lead with project alignment when present; otherwise surface the best supporting factor.
+        if self.match_reasons:
+            return " ".join(self.match_reasons)
+        # With no strong factors, show the closest alignment without claiming a strong match.
         if self.project_type_match.score >= 50:
             return self.project_type_match.explanation
         strongest = max((factor for _, factor, _ in self.breakdown), key=lambda factor: factor.score)
@@ -107,11 +158,37 @@ class RelevanceScore(BaseModel):
 
     @property
     def main_concern(self) -> str | None:
-        # Project mismatch matters most, followed by the other factors and missing evidence.
+        # Surface mismatches here; unresolved questions have their own clarification section.
         for _, factor, _ in self.breakdown:
             if factor.score < 75 and factor.explanation != self.main_reason:
                 return factor.explanation
-        return self.missing_information[0] if self.missing_information else None
+        return None
+
+    @property
+    def clarifications(self) -> list[str]:
+        """Collect uncertainties once, preserving their order and removing duplicates."""
+        items = [factor.clarification for _, factor, _ in self.breakdown]
+        items.extend(self.missing_information)
+        unique = {}
+        for item in items:
+            if cleaned := optional_text(item):
+                unique.setdefault(cleaned.casefold().rstrip("."), cleaned)
+        return list(unique.values())
+
+    @property
+    def assessment_confidence(self) -> str:
+        """Use the least certain factor; unresolved questions prevent High confidence."""
+        levels = [factor.confidence for _, factor, _ in self.breakdown]
+        if "Low" in levels:
+            return "Low"
+        return "Medium" if "Medium" in levels or self.clarifications else "High"
+
+    def factor_label(self, name: str, factor: RelevanceFactor) -> str:
+        if name == "Funding fit" and factor.score >= 75:
+            return "Within range"
+        if factor.label == "Exact match" and self.missing_information:
+            return "Strong match"
+        return factor.label
 
     @property
     def weighted_score(self) -> float:
@@ -124,7 +201,7 @@ class RelevanceScore(BaseModel):
         # Rounding alone must never create a perfect match.
         if self.weighted_score < 100:
             rounded = min(rounded, 99)
-        return min(rounded, 94) if self.missing_information else rounded
+        return rounded
 
     @property
     def tone(self) -> str:
@@ -132,7 +209,11 @@ class RelevanceScore(BaseModel):
 
     @property
     def label(self) -> str:
-        return {"strong": "Strong overall fit", "partial": "Partial overall fit", "weak": "Weak overall fit"}[self.tone]
+        if self.score >= 90:
+            return "Very strong match"
+        if self.score < 25:
+            return "No match"
+        return {"strong": "Strong match", "partial": "Partial match", "weak": "Weak match"}[self.tone]
 
     @property
     def breakdown(self) -> list[tuple[str, RelevanceFactor, int]]:

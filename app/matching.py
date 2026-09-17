@@ -67,7 +67,7 @@ def check_eligibility(
             passed=size_passed,
         ),
         EligibilityCheck(
-            label="Funding range", status="Eligible" if budget_passed else "Outside range",
+            label="Funding range", status="Within range" if budget_passed else "Outside range",
             passed=budget_passed,
         ),
         EligibilityCheck(

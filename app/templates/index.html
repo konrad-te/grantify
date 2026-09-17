@@ -5,8 +5,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Gratify — Find funding</title>
-  <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}">
-  <script src="{{ url_for('static', path='/app.js') }}" defer></script>
+  <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}?v=checklist-icons-2">
+  <script src="{{ url_for('static', path='/app.js') }}?v=checklist-help-1" defer></script>
 </head>
 <body>
 <main>
@@ -18,31 +18,55 @@
   <aside class="notice">Demo only: all 12 programmes, deadlines and source links are fictional.
     Eligibility uses simplified rules; an AI relevance score is not a probability of funding.</aside>
   <form id="funding-form" action="/match" method="post">
-    <label for="description">Your company and project</label>
-    <p id="description-help" class="muted">Include country, company size (SME or large), industry, project goal and total budget in EUR.
-      For this demo, the project budget must fit the programme's funding range.</p>
+    <label for="description">Tell us about your business and your plans</label>
+    <p id="description-help" class="muted">For the most accurate matching, please include these details in your description:</p>
+    <div id="description-checklist" aria-live="polite">
+      <ul class="description-checklist">
+        {% for key, label, help in [
+          ('country', 'Country where your company is based', 'Enter the country where your business is registered, such as Poland. You can find it in your company registration documents.'),
+          ('company_size', 'Company size (SME or large enterprise)', 'SME means small or medium-sized enterprise. Use your company’s recorded size category, or ask your accountant if you are unsure. Employee count alone does not determine it.'),
+          ('industry', 'Industry or business sector', 'Describe what your business does, such as food manufacturing or software development. Your company website or business registration can help.'),
+          ('employees', 'Number of employees', 'Include how many people your company employs, for example 30 employees. Check your current HR or payroll records; enter 0 if you have no employees.'),
+          ('project_type', 'Planned activities or purchases', 'Explain what you want to do or buy, such as replace machinery or install solar panels. Use your project plan, equipment list or supplier quotes.'),
+          ('project_goal', 'Intended outcome or improvement', 'Explain what you want the project to achieve, such as lower electricity use or increased production capacity. Use your business case or project objectives; include a target if you have one.'),
+          ('project_budget', 'Total project budget', 'Give the estimated cost of the whole project, including the part you will pay yourself, rather than only the grant you want. Use your project budget or supplier estimates.'),
+          ('currency', 'Budget currency (EUR for this demo)', 'Name the currency used for your budget, such as EUR or euros. Check the currency on your budget or quotes. This demo matches budgets stated in EUR and does not convert currencies.')
+        ] %}
+        {% set found = profile is defined and profile and profile.get(key) is not none %}
+        <li class="checklist-item{% if found %} is-found{% endif %}">
+          <span class="checklist-icon" aria-hidden="true">{{ '✓' if found else '○' }}</span>
+          <span>{{ label }}<span class="checklist-status">{{ ' — Identified' if found else ' — Not identified' if profile is defined and profile else '' }}</span></span>
+          <button class="checklist-info" type="button" aria-label="Help: {{ label }}" aria-expanded="false" aria-controls="help-{{ key }}" aria-describedby="help-{{ key }}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5" />
+              <path d="M12 11v5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+              <circle cx="12" cy="7.5" r="1" fill="currentColor" />
+            </svg>
+          </button>
+          <span id="help-{{ key }}" class="checklist-help" role="tooltip" hidden><strong>{{ label }}</strong>{{ help }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      <p class="muted checklist-note">{{ 'Checkmarks show details identified in your description. Add any missing details and search again.' if profile is defined and profile else 'After your search, checkmarks will show which details we identified.' }}</p>
+    </div>
+    <div class="description-editor">
+      <div id="highlighted-description" class="description-highlights" aria-hidden="true"></div>
     <textarea id="description" name="description" rows="6" required minlength="20" maxlength="5000"
       aria-describedby="description-help"
       placeholder="Polish manufacturing SME with 35 employees. We want funding to improve energy efficiency in our factory. Estimated project cost is EUR 150,000.">{{ description | default('') }}</textarea>
-    <p class="muted">Your description is processed by your local Ollama model for extraction and scoring. Searches are not saved locally.</p>
+    </div>
+    <p class="muted">Your description is used to understand your project and compare opportunities. Searches are not saved.</p>
     <button id="submit-button" type="submit">
       <span class="spinner" aria-hidden="true"></span>
       <span class="button-label">Find funding</span>
     </button>
-    <span class="muted">Your local model may need a little time.</span>
   </form>
 
   <section id="matching-progress" class="matching-progress" aria-label="Matching progress" hidden>
-    <ol class="matching-steps">
-      <li data-step="1">Understand your project</li>
-      <li data-step="2">Build your profile</li>
-      <li data-step="3">Compare opportunities</li>
-      <li data-step="4">Your shortlist</li>
-    </ol>
+    <div id="loading-bar" class="loading-bar" role="progressbar" aria-label="Funding search progress" aria-describedby="loading-status">
+      <span id="loading-fill" class="loading-fill"></span>
+    </div>
     <p id="loading-status" role="status" aria-live="polite"></p>
-    <p id="highlighted-description" class="highlighted-description"></p>
-    <div id="profile-chips" class="profile-chips" aria-label="Extracted profile" hidden></div>
-    <p id="comparison-note" class="muted" hidden>Comparing your profile with programme requirements and project goals.</p>
   </section>
 
   <div id="matching-output" tabindex="-1">
@@ -69,6 +93,7 @@
       </div>
     {% endfor %}</dl>
     <p class="muted">If a detail is wrong, edit the description above and search again.</p>
+    <button id="save-profile-button" type="button">Save</button>
   </details>
   {% endif %}
 
@@ -82,7 +107,7 @@
     <article class="card funding-card tone-{{ result.relevance.tone }}">
       <div class="card-heading">
         <div>
-          <p class="card-eyebrow">Opportunity {{ loop.index }} · Mock programme</p>
+          <p class="card-eyebrow">Opportunity {{ loop.index }}</p>
           <h3>{{ grant.title }}</h3>
         </div>
         <div class="score-panel" aria-label="Relevance score: {{ result.relevance.score }}/100">
@@ -94,6 +119,16 @@
       <dl class="grant-meta">
         <div><dt>Funding range</dt><dd>EUR {{ '{:,.0f}'.format(grant.minimum_funding) }}–{{ '{:,.0f}'.format(grant.maximum_funding) }}</dd></div>
         <div><dt>Application deadline</dt><dd>{{ grant.deadline }}</dd></div>
+        <div class="confidence-meta"><dt>Assessment confidence
+          <span class="confidence-info" tabindex="0" aria-label="About assessment confidence" aria-describedby="confidence-tooltip-{{ loop.index }}">ⓘ</span>
+          <span class="confidence-tooltip" id="confidence-tooltip-{{ loop.index }}" role="tooltip" hidden>
+            <strong class="tooltip-title">How sure is this assessment?</strong>
+            <span><strong>High:</strong> The important details are clear.</span>
+            <span><strong>Medium:</strong> One detail still needs checking.</span>
+            <span><strong>Low:</strong> We need more information to judge reliably.</span>
+            <span>This does not predict whether you will receive funding.</span>
+          </span>
+        </dt><dd>{{ result.relevance.assessment_confidence }}</dd></div>
       </dl>
 
       <div class="compact-eligibility" aria-label="Eligibility checks">
@@ -106,11 +141,18 @@
       </div>
 
       <div class="match-summary">
-        <p><strong>{{ 'Why it matches' if result.relevance.project_type_match.score >= 50 else 'Closest alignment' }}</strong> {{ result.relevance.main_reason }}</p>
+        <p><strong>{{ 'Why it matches' if result.relevance.project_type_match.score >= 75 and result.relevance.project_type_match.confidence != 'Low' else 'Closest alignment' }}</strong> {{ result.relevance.main_reason }}</p>
         {% if result.relevance.main_concern %}
         <p class="match-concern"><strong>Keep in mind</strong> {{ result.relevance.main_concern }}</p>
         {% endif %}
       </div>
+
+      {% if result.relevance.clarifications %}
+      <aside class="missing-info">
+        <strong>Needs clarification</strong>
+        <ul>{% for item in result.relevance.clarifications %}<li>{{ item }}</li>{% endfor %}</ul>
+      </aside>
+      {% endif %}
 
       <details class="match-details">
         <summary>View match details</summary>
@@ -119,37 +161,29 @@
         {% for label, factor, weight in result.relevance.breakdown %}
         <div class="factor tone-{{ factor.tone }}">
           <div class="factor-heading">
-            <div><strong>{{ label }}</strong><span class="factor-weight">{{ weight }}% of score</span></div>
-            <span class="factor-label">{{ factor.label if label != 'Funding fit' else factor.label | replace('match', 'fit') }}</span>
+            <div><strong>{{ label }}</strong><span class="factor-weight">Weight: {{ weight }}%</span></div>
+            <span class="factor-label">{{ result.relevance.factor_label(label, factor) }}</span>
           </div>
           <dl class="factor-comparison">
             <div><dt>Your company / project</dt><dd>{{ factor.company_need }}</dd></div>
             <div><dt>This programme supports</dt><dd>{{ factor.grant_support }}</dd></div>
           </dl>
           <p class="factor-explanation"><strong>{{ 'Where it differs' if factor.score < 75 else 'Why it fits' }}:</strong> {{ factor.explanation }}</p>
-          {% if factor.improvement %}<p class="factor-next-step"><strong>What could help:</strong> {{ factor.improvement }}</p>{% endif %}
+          {% if factor.improvement and factor.improvement not in result.relevance.clarifications %}<p class="factor-next-step"><strong>What could help:</strong> {{ factor.improvement }}</p>{% endif %}
         </div>
         {% endfor %}
       </div>
       <details class="score-calculation">
         <summary>How the score is calculated</summary>
-        <p>Local AI estimates each factor; fixed weights determine its contribution.</p>
+        <p>Project fit carries the most weight, followed by industry match and funding fit. Confidence describes how well the available information supports the assessment.</p>
         <ul>
           {% for label, factor, weight in result.relevance.breakdown %}
           <li><span>{{ label }}: {{ factor.score }} × {{ weight }}%</span><strong>{{ '%.2f' | format(factor.score * weight / 100) }} points</strong></li>
           {% endfor %}
         </ul>
-        <p>Weighted total: <strong>{{ '%.2f' | format(result.relevance.weighted_score) }}/100</strong>. Rounded to a whole number; 100 requires every factor to be 100.</p>
-        {% if result.relevance.missing_information %}<p class="confidence-note">Important information is missing, so the final score is capped at 94/100.</p>{% endif %}
+        <p>Weighted total: <strong>{{ '%.2f' | format(result.relevance.weighted_score) }}/100</strong>. Rounded to a whole number.</p>
         <p><strong>Final relevance score: {{ result.relevance.score }}/100</strong></p>
       </details>
-      {% if result.relevance.missing_information %}
-      <aside class="missing-info">
-      <strong>Worth clarifying</strong>
-      <p>These details could change the assessment.</p>
-      <ul>{% for item in result.relevance.missing_information %}<li>{{ item }}</li>{% endfor %}</ul>
-      </aside>
-      {% endif %}
       <footer class="card-footer"><span>AI assessment · Not a funding guarantee</span><a href="{{ grant.source_url }}" target="_blank" rel="noopener noreferrer">Mock source (placeholder) ↗</a></footer>
       </details>
     </article>

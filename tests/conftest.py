@@ -36,6 +36,7 @@ def make_relevance_score():
             return RelevanceFactor(
                 score=score, company_need=f"Company {name} need", grant_support=f"Grant {name} scope",
                 explanation=f"{name} explanation based on the inputs.", improvement=None,
+                confidence="High", clarification=None,
             )
 
         return RelevanceScore(

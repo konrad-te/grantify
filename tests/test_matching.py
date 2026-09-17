@@ -21,7 +21,7 @@ def test_matching_profile_is_eligible(profile, grant):
     assert [(check.label, check.status) for check in result.checks] == [
         ("Country", "Eligible"),
         ("Company size", "Eligible"),
-        ("Funding range", "Eligible"),
+        ("Funding range", "Within range"),
         ("Deadline", "Open"),
     ]
 
@@ -93,7 +93,8 @@ def test_final_relevance_score_is_weighted():
     """Show that Python, rather than the AI, combines the three relevance factors."""
     factor_scores = [90, 80, 70]
     factors = [RelevanceFactor(score=score, company_need="Company goal", grant_support="Grant scope",
-                               explanation="Grounded explanation", improvement=None)
+                               explanation="Grounded explanation", improvement=None,
+                               confidence="High", clarification=None)
                for score in factor_scores]
     result = RelevanceScore(
         grant_id=1,
@@ -110,7 +111,7 @@ def test_project_mismatch_dominates_perfect_industry_and_budget(make_relevance_s
     result = make_relevance_score(1, 100)
     result.project_type_match.score = 0
     assert result.score == 40
-    assert result.label == "Weak overall fit"
+    assert result.label == "Weak match"
 
 
 def test_rounding_cannot_create_perfect_score(make_relevance_score):
@@ -120,22 +121,27 @@ def test_rounding_cannot_create_perfect_score(make_relevance_score):
     assert result.score == 99
 
 
-def test_perfect_score_requires_no_missing_information(make_relevance_score):
-    """Cap an otherwise perfect result when important matching information is missing."""
-    assert make_relevance_score(1, 100).score == 100
-    assert make_relevance_score(1, 100, ["Expected energy savings"]).score == 94
+def test_missing_information_changes_confidence_not_relevance(make_relevance_score):
+    confirmed = make_relevance_score(1, 100)
+    uncertain = make_relevance_score(1, 100, ["Confirm energy savings to assess the expected impact."])
+    assert confirmed.score == uncertain.score == 100
+    assert confirmed.assessment_confidence == "High"
+    assert uncertain.assessment_confidence == "Medium"
+    assert uncertain.factor_label("Project fit", uncertain.project_type_match) == "Strong match"
 
 
 @pytest.mark.parametrize("score, label", [
-    (95, "Exact match"),
+    (100, "Exact match"),
+    (95, "Strong match"),
     (80, "Strong match"),
     (60, "Partial match"),
     (30, "Weak match"),
-    (10, "No clear match"),
+    (10, "No match"),
 ])
 def test_factor_scores_have_plain_language_labels(score, label):
     factor = RelevanceFactor(score=score, company_need="Company goal", grant_support="Grant scope",
-                             explanation="Grounded explanation", improvement=None)
+                             explanation="Grounded explanation", improvement=None,
+                             confidence="High", clarification=None)
     assert factor.label == label
 
 
@@ -160,3 +166,82 @@ def test_null_missing_information_does_not_cap_score(make_relevance_score):
     data = make_relevance_score(1, 100).model_dump()
     data["missing_information"] = None
     assert RelevanceScore.model_validate(data).score == 100
+
+
+@pytest.mark.parametrize("confidence", ["High", "Medium", "Low"])
+def test_uncertain_project_cannot_be_exact_and_does_not_lose_points(make_relevance_score, confidence):
+    data = make_relevance_score(1, 100).model_dump()
+    question = "Machinery replacement is not explicitly supported, so the planned purchase needs confirmation."
+    data["project_type_match"].update(confidence=confidence, clarification=question)
+    data["missing_information"] = [question, question.upper()]
+    result = RelevanceScore.model_validate(data)
+    assert result.score == 100
+    assert result.project_type_match.label == "Strong match"
+    assert result.assessment_confidence == ("Low" if confidence == "Low" else "Medium")
+    assert result.clarifications == [question]
+    assert result.main_concern is None
+
+
+def test_confident_mismatch_and_funding_range_labels(make_relevance_score):
+    result = make_relevance_score(1, 10)
+    assert result.assessment_confidence == "High"
+    assert result.label == "No match"
+    result.funding_fit.score = 100
+    assert result.factor_label("Funding fit", result.funding_fit) == "Within range"
+
+
+@pytest.mark.parametrize("field", ["clarification", "missing_information"])
+def test_generic_clarifications_are_rejected(make_relevance_score, field):
+    data = make_relevance_score(1, 95).model_dump()
+    if field == "clarification":
+        data["project_type_match"][field] = "Important information is missing."
+    else:
+        data[field] = ["Important information is missing."]
+    with pytest.raises(ValidationError, match="Name the uncertain fact"):
+        RelevanceScore.model_validate(data)
+
+
+def test_lower_confidence_requires_an_explanation(make_relevance_score):
+    data = make_relevance_score(1, 95).model_dump()
+    data["project_type_match"]["confidence"] = "Medium"
+    with pytest.raises(ValidationError, match="requires a specific clarification"):
+        RelevanceScore.model_validate(data)
+
+
+def test_summary_uses_strong_factors_and_keeps_mismatches_separate(make_relevance_score):
+    result = make_relevance_score(1, 95)
+    assert result.match_reasons == [
+        result.project_type_match.explanation, result.industry_match.explanation,
+        result.funding_fit.explanation,
+    ]
+    assert all(reason in result.main_reason for reason in result.match_reasons)
+    result.project_type_match.score = 10
+    assert result.match_reasons == [result.industry_match.explanation, result.funding_fit.explanation]
+    assert result.project_type_match.explanation not in result.main_reason
+    assert result.main_concern == result.project_type_match.explanation
+
+
+def test_summary_avoids_duplicate_and_unsubstantiated_reasons(make_relevance_score):
+    result = make_relevance_score(1, 95)
+    result.funding_fit.explanation = result.industry_match.explanation
+    result.project_type_match.confidence = "Low"
+    result.project_type_match.clarification = "Confirm the activity to assess project alignment."
+    assert result.match_reasons == [result.industry_match.explanation]
+    result.industry_match.score = result.funding_fit.score = 30
+    assert result.match_reasons == []
+
+
+@pytest.mark.parametrize("placeholder", [
+    None, "", "  ", "Null", "None", "N/A", [], {}, "[]", "{}", "[ ]", "—",
+    '"null"', "None.", "No clarification needed", "No missing information",
+])
+def test_empty_clarifications_are_hidden_and_do_not_lower_confidence(make_relevance_score, placeholder):
+    data = make_relevance_score(1, 95).model_dump()
+    for field in ("industry_match", "project_type_match", "funding_fit"):
+        data[field]["clarification"] = placeholder
+    data["missing_information"] = [placeholder]
+    result = RelevanceScore.model_validate(data)
+    assert result.clarifications == []
+    assert result.assessment_confidence == "High"
+    data["missing_information"] = placeholder
+    assert RelevanceScore.model_validate(data).clarifications == []

@@ -67,6 +67,10 @@ def test_scoring_sends_all_factor_inputs(monkeypatch, profile, grant, make_relev
     assert "score" not in relevance_properties
     assert "Do not reassess eligibility" in captured["instructions"]
     assert "weighted score" in captured["instructions"]
+    factor_properties = captured["schema"]["$defs"]["RelevanceFactor"]["properties"]
+    assert "confidence" in factor_properties
+    assert "clarification" in factor_properties
+    assert "do not subtract points or cap relevance" in captured["instructions"]
     assert result[0].score == 80
 
 
