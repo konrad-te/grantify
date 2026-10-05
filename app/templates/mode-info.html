@@ -1,0 +1,10 @@
+{% if demo_mode %}
+<aside class="notice" aria-label="Presentation mode">
+  <strong>Presentation demo · fixed date {{ reference_date }}</strong>
+  <p>Uses a frozen catalogue snapshot, not today’s availability. No dates are moved forward. AI preparation is still live and may vary; sample forms work without AI.</p>
+  <a href="/">Switch to current-date mode (starts a fresh form)</a>
+</aside>
+{% else %}
+<p class="hint">Current-date mode · {{ reference_date }} · manually maintained source data.
+  <a href="/?mode=demo">Open presentation demo (starts a fresh form)</a></p>
+{% endif %}

@@ -1,0 +1,412 @@
+{
+  "version": 1,
+  "reviewed_on": "2026-10-04",
+  "scope": "Polish SMEs: innovation, digital and green transformation, startup development and internationalisation.",
+  "programmes": [
+    {
+      "id": "smart-rd",
+      "title": "Ścieżka SMART — projekty B+R",
+      "source_url": "https://www.parp.gov.pl/component/grants/grants/sciezka-smart",
+      "activities": [
+        "research_and_development"
+      ],
+      "description": "Research to develop innovative products or processes.",
+      "opens_on": "2026-10-29",
+      "closes_on": "2026-12-29",
+      "instrument": "grant",
+      "max_award": null,
+      "currency": "PLN",
+      "checks": [
+        "Confirm genuine R&D, innovation criteria and eligible research costs."
+      ],
+      "reviewed_on": "2026-10-04",
+      "cancelled": false
+    },
+    {
+      "id": "smart-implementation",
+      "title": "Ścieżka SMART — wdrożenie wyników B+R",
+      "source_url": "https://www.parp.gov.pl/component/grants/grants/sciezka-smart---nabor-projektow-dotyczacych-wdrozenia-wynikow-prac-b-r",
+      "activities": [
+        "commercialization"
+      ],
+      "description": "Implementation of completed R&D results in business.",
+      "opens_on": "2026-05-14",
+      "closes_on": "2026-06-11",
+      "instrument": "grant",
+      "max_award": null,
+      "currency": "PLN",
+      "checks": [
+        "Confirm rights to completed R&D results and the required innovation level."
+      ],
+      "reviewed_on": "2026-10-04",
+      "cancelled": false
+    },
+    {
+      "id": "digital-green-loan",
+      "title": "Pożyczki na cyfrową i zieloną transformację",
+      "source_url": "https://www.parp.gov.pl/component/grants/grants/pozyczki-na-cyfrowa-i-zielona-transformacje-przedsiebiorstw",
+      "activities": [
+        "digitalization",
+        "energy_efficiency",
+        "renewable_energy",
+        "circular_economy"
+      ],
+      "description": "Repayable finance for digital and environmental business transformation.",
+      "opens_on": null,
+      "closes_on": null,
+      "instrument": "loan",
+      "max_award": null,
+      "currency": "PLN",
+      "checks": [
+        "Published eligible project-cost range: PLN 2.5–15 million; this is not a grant award range.",
+        "Launch planned for Q4 2026 through financial intermediaries; confirm actual availability and credit terms."
+      ],
+      "reviewed_on": "2026-10-04",
+      "cancelled": false
+    },
+    {
+      "id": "scale-up-green",
+      "title": "Startup Booster Poland — Scale Up Green",
+      "source_url": "https://www.parp.gov.pl/component/grants/grants/startup-booster-poland---Scale-Up-Green",
+      "activities": [
+        "startup_development",
+        "circular_economy"
+      ],
+      "description": "Accelerator support for young companies testing solutions with technology recipients, including circular business models.",
+      "opens_on": "2026-01-30",
+      "closes_on": "2027-09-30",
+      "instrument": "accelerator grant",
+      "max_award": 400000,
+      "currency": "PLN",
+      "checks": [
+        "Micro or small startup required; SME status alone is insufficient.",
+        "Apply through an accelerator; its recruitment dates and track conditions may differ."
+      ],
+      "reviewed_on": "2026-10-04",
+      "cancelled": false
+    },
+    {
+      "id": "smart-up",
+      "title": "Startup Booster Poland — Smart UP",
+      "source_url": "https://www.parp.gov.pl/component/grants/grants/startup-booster-poland---oferta-dla-startupow",
+      "activities": [
+        "startup_development"
+      ],
+      "description": "Acceleration and product development support for early-stage innovative businesses.",
+      "opens_on": "2024-06-17",
+      "closes_on": "2026-05-31",
+      "instrument": "accelerator grant",
+      "max_award": 400000,
+      "currency": "PLN",
+      "checks": [
+        "Micro or small startup required; verify age, operator track and recruitment conditions."
+      ],
+      "reviewed_on": "2026-10-04",
+      "cancelled": false
+    },
+    {
+      "id": "eurogrants",
+      "title": "Granty na Eurogranty",
+      "source_url": "https://www.parp.gov.pl/component/grants/grants/granty-na-eurogranty-1",
+      "activities": [
+        "grant_preparation"
+      ],
+      "description": "Support for preparing an application to an eligible EU programme.",
+      "opens_on": "2025-08-12",
+      "closes_on": "2026-09-03",
+      "instrument": "grant",
+      "max_award": null,
+      "currency": "PLN",
+      "checks": [
+        "Funds application preparation, not the subsequent investment or research project.",
+        "Confirm the target EU programme and the applicable lump-sum category."
+      ],
+      "reviewed_on": "2026-10-04",
+      "cancelled": false
+    },
+    {
+      "id": "export-brand",
+      "title": "Promocja marki innowacyjnych MŚP",
+      "source_url": "https://www.parp.gov.pl/component/grants/grants/promocja-marki-innowacyjnych-msp",
+      "activities": [
+        "export_promotion"
+      ],
+      "description": "International trade-fair and mission support for innovative SME product brands.",
+      "opens_on": "2025-11-05",
+      "closes_on": "2026-01-08",
+      "instrument": "grant",
+      "max_award": null,
+      "currency": "PLN",
+      "checks": [
+        "Confirm eligible sectors, trade fairs, export experience and promoted product brand."
+      ],
+      "reviewed_on": "2026-10-04",
+      "cancelled": false
+    },
+    {
+      "id": "step-biotech",
+      "title": "STEP — Biotechnologie, ścieżka A",
+      "source_url": "https://www.parp.gov.pl/component/grants/grants/step---biotechnologie---innowacyjne-technologie-krytyczne",
+      "activities": [
+        "critical_biotech"
+      ],
+      "description": "Investment in innovative critical biotechnology.",
+      "opens_on": "2026-04-23",
+      "closes_on": "2026-06-18",
+      "instrument": "grant",
+      "max_award": null,
+      "currency": "PLN",
+      "checks": [
+        "The published 2026 call was cancelled; it is retained for reference only.",
+        "Confirm that the investment meets STEP critical-technology criteria."
+      ],
+      "reviewed_on": "2026-10-04",
+      "cancelled": true
+    },
+    {
+      "id": "step-clean",
+      "title": "STEP — Czyste technologie, ścieżka A",
+      "source_url": "https://www.parp.gov.pl/component/grants/grants/step---czyste-i-zasobooszczedne-technologie---innowacyjne-technologie-krytyczne",
+      "activities": [
+        "critical_clean"
+      ],
+      "description": "Investment in innovative critical clean and resource-efficient technologies.",
+      "opens_on": "2026-06-16",
+      "closes_on": "2026-08-11",
+      "instrument": "grant",
+      "max_award": null,
+      "currency": "PLN",
+      "checks": [
+        "Developing or manufacturing a critical technology is distinct from simply buying solar panels.",
+        "Confirm STEP technology scope, innovation and investment requirements."
+      ],
+      "reviewed_on": "2026-10-04",
+      "cancelled": false
+    },
+    {
+      "id": "step-digital",
+      "title": "STEP — Technologie cyfrowe, ścieżka A",
+      "source_url": "https://www.parp.gov.pl/component/grants/grants/step---technologie-cyfrowe---innowacyjne-technologie-krytyczne",
+      "activities": [
+        "critical_digital"
+      ],
+      "description": "Investment in innovative critical digital technologies.",
+      "opens_on": null,
+      "closes_on": "2026-07-16",
+      "instrument": "grant",
+      "max_award": null,
+      "currency": "PLN",
+      "checks": [
+        "Ordinary business software or factory automation does not establish STEP eligibility.",
+        "Confirm critical-technology scope and innovation requirements."
+      ],
+      "reviewed_on": "2026-10-04",
+      "cancelled": false
+    },
+    {
+      "id": "goz-model",
+      "title": "GOZ w MŚP — etap I: model biznesowy",
+      "source_url": "https://www.parp.gov.pl/component/grants/grants/gospodarka-o-obiegu-zamknietym-w-msp",
+      "activities": [
+        "circular_economy"
+      ],
+      "description": "Preparation of a circular-economy transformation business model.",
+      "opens_on": "2024-07-16",
+      "closes_on": "2024-11-28",
+      "instrument": "advisory grant",
+      "max_award": 92218,
+      "currency": "PLN",
+      "checks": [
+        "Eastern Poland location required, excluding the Warsaw capital region.",
+        "This stage finances preparation of the model, not its equipment implementation."
+      ],
+      "reviewed_on": "2026-10-04",
+      "cancelled": false
+    },
+    {
+      "id": "goz-implementation",
+      "title": "GOZ w MŚP — etap II: wdrożenie",
+      "source_url": "https://www.parp.gov.pl/component/grants/grants/gospodarka-o-obiegu-zamknietym-w-msp-etap-ii---wdrozenie-modelu-biznesowego-goz-transformacji",
+      "activities": [
+        "circular_economy"
+      ],
+      "description": "Implementation of a circular-economy business transformation.",
+      "opens_on": "2026-06-09",
+      "closes_on": "2026-07-29",
+      "instrument": "grant",
+      "max_award": 3500000,
+      "currency": "PLN",
+      "checks": [
+        "Eastern Poland location required, excluding the Warsaw capital region.",
+        "Confirm the required GOZ model, its approval and eligible implementation costs."
+      ],
+      "reviewed_on": "2026-10-04",
+      "cancelled": false
+    },
+    {
+      "id": "automation",
+      "title": "Automatyzacja i robotyzacja w MŚP",
+      "source_url": "https://www.parp.gov.pl/component/grants/grants/automatyzacja-i-robotyzacja-w-msp",
+      "activities": [
+        "digitalization"
+      ],
+      "description": "Digital transformation of production or services through automation and robotics.",
+      "opens_on": "2024-08-01",
+      "closes_on": "2024-09-26",
+      "instrument": "grant",
+      "max_award": null,
+      "currency": "PLN",
+      "checks": [
+        "Eastern Poland location required, excluding the Warsaw capital region.",
+        "A technology audit and transformation roadmap are required; verify investment and conditional-grant rules."
+      ],
+      "reviewed_on": "2026-10-04",
+      "cancelled": false
+    },
+    {
+      "id": "design",
+      "title": "Wzornictwo w MŚP",
+      "source_url": "https://www.parp.gov.pl/component/grants/grants/wzornictwo-w-msp",
+      "activities": [
+        "product_design"
+      ],
+      "description": "Design audit, design strategy and its implementation.",
+      "opens_on": "2026-02-19",
+      "closes_on": "2026-05-20",
+      "instrument": "grant",
+      "max_award": 3000000,
+      "currency": "PLN",
+      "checks": [
+        "Eastern Poland location required, excluding the Warsaw capital region.",
+        "This 2026 call targets businesses meeting the women-led business criteria; verify ownership/management requirements."
+      ],
+      "reviewed_on": "2026-10-04",
+      "cancelled": false
+    },
+    {
+      "id": "platform-iia",
+      "title": "Platformy startowe — komponent IIa",
+      "source_url": "https://bip.parp.gov.pl/component/grants/grants/2023-platformy-startowe-dla-nowych-pomyslow-komponent-iia---wsparcie-rozwoju-dzialalnosci-gospodarczej-startupu",
+      "activities": [
+        "startup_development",
+        "commercialization"
+      ],
+      "description": "Development of an incubated innovative startup product and first sales.",
+      "opens_on": "2026-06-30",
+      "closes_on": "2026-09-17",
+      "instrument": "grant",
+      "max_award": 600000,
+      "currency": "PLN",
+      "checks": [
+        "Eastern Poland location required, excluding the Warsaw capital region.",
+        "Micro or small capital company with completed qualifying Platform incubation and recommendation required."
+      ],
+      "reviewed_on": "2026-10-04",
+      "cancelled": false
+    },
+    {
+      "id": "platform-iib",
+      "title": "Platformy startowe — komponent IIb",
+      "source_url": "https://www.parp.gov.pl/component/grants/grants/platformy-startowe-dla-nowych-pomyslow-1-1-komponent-IIb",
+      "activities": [
+        "startup_development",
+        "commercialization"
+      ],
+      "description": "Further development of an innovative startup product after component IIa.",
+      "opens_on": "2026-10-06",
+      "closes_on": "2026-12-10",
+      "instrument": "grant",
+      "max_award": null,
+      "currency": "PLN",
+      "checks": [
+        "Eastern Poland location required, excluding the Warsaw capital region.",
+        "Prior completion of component IIa and its final payment application must be checked."
+      ],
+      "reviewed_on": "2026-10-04",
+      "cancelled": false
+    },
+    {
+      "id": "ecological-credit",
+      "title": "Kredyt ekologiczny (BGK)",
+      "source_url": "https://www.bgk.pl/produkty/kredyt-ekologiczny/",
+      "activities": [
+        "energy_efficiency",
+        "renewable_energy"
+      ],
+      "description": "Grant premium linked to a bank loan for energy-saving modernisation.",
+      "opens_on": "2025-10-24",
+      "closes_on": "2026-01-08",
+      "instrument": "bank loan with grant premium",
+      "max_award": null,
+      "currency": "PLN",
+      "checks": [
+        "Energy audit and at least 30% primary-energy savings in the modernised area required.",
+        "Bank creditworthiness and qualifying modernisation required; OZE alone is not enough."
+      ],
+      "reviewed_on": "2026-10-04",
+      "cancelled": false
+    },
+    {
+      "id": "technology-credit",
+      "title": "Kredyt technologiczny (BGK)",
+      "source_url": "https://www.bgk.pl/produkty/kredyt-technologiczny/",
+      "activities": [
+        "commercialization"
+      ],
+      "description": "Grant premium repaying part of a bank investment loan for technology implementation.",
+      "opens_on": null,
+      "closes_on": null,
+      "instrument": "bank loan with grant premium",
+      "max_award": null,
+      "currency": "PLN",
+      "checks": [
+        "Confirm an eligible new technology, investment costs, bank creditworthiness and own contribution.",
+        "Current call dates were not verified; check BGK before planning an application."
+      ],
+      "reviewed_on": "2026-10-04",
+      "cancelled": false
+    },
+    {
+      "id": "eic-accelerator",
+      "title": "EIC Accelerator",
+      "source_url": "https://eic.ec.europa.eu/eic-funding-opportunities/eic-accelerator_en",
+      "activities": [
+        "commercialization",
+        "startup_development"
+      ],
+      "description": "Support for high-risk breakthrough innovation and scaling, with grant and investment routes.",
+      "opens_on": null,
+      "closes_on": null,
+      "instrument": "grant / equity",
+      "max_award": null,
+      "currency": "EUR",
+      "checks": [
+        "Grant component below EUR 2.5 million for TRL 6–8; equity has different limits and terms.",
+        "Short proposals and full-proposal batching dates differ; check the current timetable.",
+        "Confirm breakthrough innovation, technology readiness and the relevant funding route."
+      ],
+      "reviewed_on": "2026-10-04",
+      "cancelled": false
+    },
+    {
+      "id": "horizon-bridge",
+      "title": "Horizon Bridge",
+      "source_url": "https://www.parp.gov.pl/component/grants/grants/program-horizon-bridge",
+      "activities": [
+        "grant_preparation"
+      ],
+      "description": "Advisory support to prepare Polish SMEs for Horizon Europe applications.",
+      "opens_on": "2026-10-15",
+      "closes_on": "2026-12-15",
+      "instrument": "advisory services",
+      "max_award": null,
+      "currency": "PLN",
+      "checks": [
+        "Published support value up to PLN 66,000 concerns advisory services, not a cash investment grant.",
+        "Confirm programme selection requirements and the intended Horizon Europe application."
+      ],
+      "reviewed_on": "2026-10-04",
+      "cancelled": false
+    }
+  ]
+}

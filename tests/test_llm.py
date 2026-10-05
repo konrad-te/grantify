@@ -90,7 +90,12 @@ def test_ollama_structured_request_is_validated(monkeypatch, profile):
 
     use_fake_ollama(monkeypatch, handler)
 
-    assert llm.extract_profile("Polish manufacturing SME") == profile
+    result = llm.extract_profile("Polish manufacturing SME")
+    assert result.country == "Poland"
+    assert result.company_size == "SME"
+    # The HTTP payload is valid, but its invented numbers and currency are discarded.
+    assert result.employees is result.project_budget is result.currency is None
+    assert result.source_phrases == ["Polish", "SME"]
     request = captured["request"]
     assert str(request.url) == "http://ollama.test:11434/api/chat"
     payload = json.loads(request.content)
@@ -98,6 +103,10 @@ def test_ollama_structured_request_is_validated(monkeypatch, profile):
     assert payload["stream"] is False
     assert payload["think"] is False
     assert payload["format"]["title"] == "CompanyProfile"
+    assert "evidence" in payload["format"]["required"]
+    evidence_schema = payload["format"]["$defs"]["ProfileEvidence"]
+    assert set(evidence_schema["required"]) == set(evidence_schema["properties"])
+    assert "project_goal" in payload["format"]["required"]
     assert payload["options"]["temperature"] == 0
     assert "Extract a company" in payload["messages"][0]["content"]
     assert payload["messages"][1]["content"] == "Polish manufacturing SME"

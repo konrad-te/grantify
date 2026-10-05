@@ -13,7 +13,7 @@ def profile():
     """Provide a fresh Polish SME profile whose EUR 150,000 project fits the sample grant."""
     return CompanyProfile(
         country="Poland", company_size="SME", industry="manufacturing", employees=35,
-        project_type="energy_efficiency", project_budget=150000, currency="EUR",
+        project_type="energy_efficiency", project_budget=150000, requested_funding=150000, currency="EUR",
     )
 
 

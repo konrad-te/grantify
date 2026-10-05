@@ -13,6 +13,27 @@ from app.schemas import CompanyProfile, RelevanceFactor, RelevanceScore
 TODAY = date(2030, 1, 1)
 
 
+def test_large_project_is_not_rejected_when_requested_award_fits(profile, grant):
+    profile.project_budget = 900000
+    profile.requested_funding = 120000
+    assert check_eligibility(profile, grant, TODAY).eligible
+
+
+def test_missing_award_is_not_inferred_from_total_cost(profile, grant):
+    profile.requested_funding = None
+    result = check_eligibility(profile, grant, TODAY)
+    assert not result.eligible
+    assert any("How much funding" in reason for reason in result.reasons)
+
+
+def test_requested_award_cannot_exceed_total_cost(profile, grant):
+    profile.project_budget = 100000
+    profile.requested_funding = 120000
+    result = check_eligibility(profile, grant, TODAY)
+    assert not result.eligible
+    assert any("exceeds the total project cost" in reason for reason in result.reasons)
+
+
 def test_matching_profile_is_eligible(profile, grant):
     """Confirm that a profile meeting every rule is eligible and has no failure reasons."""
     result = check_eligibility(profile, grant, TODAY)
@@ -30,12 +51,12 @@ def test_matching_profile_is_eligible(profile, grant):
 @pytest.mark.parametrize("changes, reason", [
     ({"country": "France"}, "Eligible countries"),
     ({"company_size": "large"}, "Supported company sizes"),
-    ({"project_budget": 19999}, "Project budget"),
-    ({"project_budget": 300001}, "Project budget"),
-    ({"country": None}, "include country"),
-    ({"company_size": None}, "include company size"),
-    ({"project_budget": None}, "include project budget"),
-    ({"currency": None}, "include currency"),
+    ({"requested_funding": 19999}, "Requested funding"),
+    ({"requested_funding": 300001}, "Requested funding"),
+    ({"country": None}, "Where is your company based"),
+    ({"company_size": None}, "SME or a large enterprise"),
+    ({"project_budget": None}, "total cost of your project"),
+    ({"currency": None}, "Which currency"),
     ({"currency": "PLN"}, "budget in EUR"),
 ])
 def test_ineligible_profiles(profile, grant, changes, reason):
@@ -48,7 +69,7 @@ def test_ineligible_profiles(profile, grant, changes, reason):
 @pytest.mark.parametrize("budget", [20000, 300000])
 def test_budget_boundaries_are_inclusive(profile, grant, budget):
     """Confirm that a budget exactly at either funding limit is accepted."""
-    assert check_eligibility(profile.model_copy(update={"project_budget": budget}), grant, TODAY).eligible
+    assert check_eligibility(profile.model_copy(update={"requested_funding": budget, "project_budget": budget}), grant, TODAY).eligible
 
 
 def test_deadline_today_is_open_but_yesterday_is_closed(profile, grant):
@@ -77,10 +98,10 @@ def test_all_failed_rules_are_explained(profile, grant):
 
 def test_country_and_currency_case(profile, grant):
     """Use lowercase country and currency values and verify that only the bad budget fails."""
-    changed = profile.model_copy(update={"country": "poland", "currency": "eur", "project_budget": 1})
+    changed = profile.model_copy(update={"country": "poland", "currency": "eur", "requested_funding": 1})
     result = check_eligibility(changed, grant, TODAY)
     assert len(result.reasons) == 1
-    assert "Project budget" in result.reasons[0]
+    assert "Requested funding" in result.reasons[0]
 
 
 def test_ranking_highest_first_and_stable_ties(make_relevance_score):

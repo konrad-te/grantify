@@ -33,6 +33,20 @@ def specific_clarification(value: str | None) -> str | None:
     return value
 
 
+class ProfileEvidence(BaseModel):
+    """A short verbatim excerpt supporting each extracted field, or null."""
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    country: str | None = None
+    company_size: str | None = None
+    industry: str | None = None
+    employees: str | None = None
+    project_type: str | None = None
+    project_goal: list[str] | None = Field(default=None, description="Separate verbatim excerpts for every intended outcome, e.g. ['improve energy efficiency', 'reducing electricity consumption']")
+    project_budget: str | None = None
+    requested_funding: str | None = None
+    currency: str | None = None
+
+
 class CompanyProfile(BaseModel):
     """Validated company and project details extracted from the description.
 
@@ -47,8 +61,11 @@ class CompanyProfile(BaseModel):
     project_type: str | None = Field(min_length=1)
     project_goal: str | None = Field(default=None, min_length=1, description="Explicit intended outcome of the project, or null")
     project_budget: float | None = Field(gt=0, allow_inf_nan=False)
+    requested_funding: float | None = Field(default=None, gt=0, allow_inf_nan=False,
+        description="Explicit requested grant amount, separate from total project cost")
     currency: str | None = Field(description="Explicit ISO currency code, e.g. EUR, or null")
     source_phrases: list[str] = Field(default_factory=list, description="Exact short excerpts from the original description for the extracted attributes")
+    evidence: ProfileEvidence = Field(default_factory=ProfileEvidence)
 
 
 class EligibilityCheck(BaseModel):

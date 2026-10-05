@@ -1,0 +1,49 @@
+{% macro programme_card(row) %}
+{% set p = row.programme %}
+<article class="card tone-partial" data-programme-id="{{ p.id }}">
+  <div class="card-heading"><h3>{{ p.title }}</h3><span class="badge">{{ row.status }}</span></div>
+  <p>{{ p.description }}</p>
+  <p class="hint">{{ p.instrument }} · Source reviewed: {{ p.reviewed_on }}</p>
+  <h4>Why it appears</h4>
+  <ul>{% for activity in row.matched %}<li>{{ activity }}</li>{% endfor %}</ul>
+  <p>{{ row.amount_note }}</p>
+  <p class="hint">Country is in this record’s reviewed coverage list; this does not confirm eligibility. <a href="{{ p.country_source_url }}" target="_blank" rel="noopener noreferrer">Country rules</a></p>
+  <div class="assessment"><strong>What still needs checking</strong>
+    <ul>{% for question in row.questions %}<li>{{ question }}</li>{% endfor %}</ul>
+  </div>
+  <dl>
+    <div><dt>Published application window</dt><dd>{{ p.opens_on or 'Start not verified' }} → {{ p.closes_on or 'End not verified' }}</dd></div>
+    <div><dt>Recorded maximum cash award</dt><dd>{% if p.max_award %}{{ p.currency }} {{ '{:,.0f}'.format(p.max_award) }}{% else %}Not assessed{% endif %}</dd></div>
+  </dl>
+  <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer">Official source — conditions and applications (English)</a> · <a href="{{ p.schedule_source_url }}" target="_blank" rel="noopener noreferrer">Schedule source</a>
+</article>
+{% endmacro %}
+<section>
+  <h2>Your funding shortlist</h2>
+  <p>Evaluated as of {{ reference_date }}{{ " (fixed demo snapshot)" if demo_mode else " (current-date mode)" }}.</p>
+  <p>Sorted by overlap with your selected activities. This is not a funding approval, an eligibility score or a guarantee that applications are accepted today.</p>
+  <div class="result-summary" role="status">
+    <p><strong>{{ programme_groups.candidates | length }}</strong> topic matches to investigate</p>
+    <p><strong>{{ programme_groups.upcoming | length }}</strong> upcoming</p>
+    <p><strong>{{ programme_groups.archive | length }}</strong> closed or cancelled</p>
+  </div>
+  {% if not programme_groups.candidates and not programme_groups.upcoming %}
+  <p class="notice">No current or upcoming shortlist candidates for these answers. Check the archived matches and exclusion reasons below. Keep your project details accurate.</p>
+  {% endif %}
+  {% for key, heading in [('candidates', 'Topic matches — availability needs confirmation'), ('upcoming', 'Upcoming published calls')] %}
+    {% if programme_groups[key] %}<h2>{{ heading }}</h2>
+    {% for row in programme_groups[key] %}{{ programme_card(row) }}{% endfor %}{% endif %}
+  {% endfor %}
+  {% if programme_groups.archive %}
+  <details><summary>Closed or cancelled calls with matching topics ({{ programme_groups.archive | length }})</summary>
+    <p>Reference only. These published calls are not open for new applications.</p>
+    {% for row in programme_groups.archive %}{{ programme_card(row) }}{% endfor %}
+  </details>{% endif %}
+  {% if programme_groups.excluded %}
+  <details><summary>Not shortlisted ({{ programme_groups.excluded | length }})</summary>
+    {% for row in programme_groups.excluded %}<article data-excluded-id="{{ row.programme.id }}"><h3>{{ row.programme.title }}</h3>
+      <p class="hint">{{ row.status }}</p><ul>{% for reason in row.reasons %}<li>{{ reason }}</li>{% endfor %}</ul>
+      <a href="{{ row.programme.source_url }}" target="_blank" rel="noopener noreferrer">Official source</a>
+    </article>{% endfor %}
+  </details>{% endif %}
+</section>

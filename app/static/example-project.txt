@@ -1,0 +1,8 @@
+Example fictional project for testing Gratify
+
+We are a software startup registered in Ireland.
+Our company is an SME.
+We will commercialise innovative software technology.
+We request EUR 120,000 funding; total project cost is EUR 180,000.
+
+Review all suggested form answers before searching.

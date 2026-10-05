@@ -1,0 +1,481 @@
+{
+  "version": 2,
+  "as_of": "2026-10-04",
+  "catalogue": "app/data/demo-europe-2026-10-04.json",
+  "notes": "Authored fictional English inputs. Expectations test conservative topic shortlisting, not funding eligibility. Live AI extraction is a separate evaluation and may omit uncertain values.",
+  "cases": [
+    {
+      "id": "software",
+      "title": "Software startup",
+      "description": "We are a software startup registered in Ireland. Our company is an SME. We will commercialise innovative software technology. We request EUR 120,000 funding; total project cost is EUR 180,000.",
+      "expected_form": {
+        "country": "Ireland",
+        "company_size": "SME",
+        "industry": "software",
+        "activities": [
+          "commercialization"
+        ],
+        "requested_funding": "120000",
+        "project_budget": "180000",
+        "currency": "EUR"
+      },
+      "expected": {
+        "candidates": [
+          "eic-accelerator"
+        ],
+        "archive": [
+          "eic-transition"
+        ],
+        "first_candidate": "eic-accelerator"
+      },
+      "demo": true,
+      "explanation": "EIC Accelerator is a topic match needing technology-stage and innovation checks. EIC Transition is archived and would also require an eligible prior EU-funded research project."
+    },
+    {
+      "id": "manufacturing",
+      "title": "Innovative manufacturing",
+      "description": "We are a manufacturing SME registered in Germany. We will develop a prototype for a new production process. We will install energy-saving equipment. We request EUR 500,000 funding; total project cost is EUR 800,000.",
+      "expected_form": {
+        "country": "Germany",
+        "company_size": "SME",
+        "industry": "manufacturing",
+        "activities": [
+          "research_and_development",
+          "energy_efficiency"
+        ],
+        "requested_funding": "500000",
+        "project_budget": "800000",
+        "currency": "EUR"
+      },
+      "expected": {
+        "candidates": [
+          "eic-pathfinder-challenges",
+          "eureka-network"
+        ],
+        "archive": [
+          "eic-pathfinder-open",
+          "eic-transition",
+          "eurostars",
+          "life-climate",
+          "life-clean-energy"
+        ]
+      },
+      "demo": true,
+      "explanation": "Eureka Network Projects and Pathfinder Challenges are research-topic leads, not confirmed eligibility. International partners and specific challenge fit need checking. Eurostars and the recorded LIFE calls are closed at this date."
+    },
+    {
+      "id": "recycling",
+      "title": "Recycling and water reuse",
+      "description": "We are a recycling company registered in the Netherlands. Our company is an SME. We will recycle manufacturing waste. We will install water-saving equipment. We request EUR 400,000 funding; total project cost is EUR 700,000.",
+      "expected_form": {
+        "country": "Netherlands",
+        "company_size": "SME",
+        "industry": "waste_management",
+        "activities": [
+          "circular_economy",
+          "water_efficiency"
+        ],
+        "requested_funding": "400000",
+        "project_budget": "700000",
+        "currency": "EUR"
+      },
+      "expected": {
+        "candidates": [],
+        "upcoming": [],
+        "archive": [
+          "life-circular",
+          "life-climate"
+        ]
+      },
+      "demo": true,
+      "explanation": "The recorded LIFE circular-economy and climate calls match the topics but are closed. This example should show archived matches, not promise an open grant."
+    },
+    {
+      "id": "market-study",
+      "title": "Overseas feasibility study",
+      "description": "We are a software SME registered in Ireland. We will conduct a market feasibility study in Canada. We request EUR 60,000 funding; total project cost is EUR 86,000.",
+      "expected_form": {
+        "country": "Ireland",
+        "company_size": "SME",
+        "industry": "software",
+        "activities": [
+          "export_promotion"
+        ],
+        "requested_funding": "60000",
+        "project_budget": "86000",
+        "currency": "EUR"
+      },
+      "expected": {
+        "candidates": [
+          "innowwide"
+        ],
+        "first_candidate": "innowwide",
+        "archive": []
+      }
+    },
+    {
+      "id": "over-cap",
+      "title": "Above the Innowwide cap",
+      "description": "We are a software SME registered in Ireland. We will conduct a market feasibility study in Canada. We request EUR 60,000.01 funding; total project cost is EUR 90,000.",
+      "expected_form": {
+        "country": "Ireland",
+        "company_size": "SME",
+        "industry": "software",
+        "activities": [
+          "export_promotion"
+        ],
+        "requested_funding": "60000.01",
+        "project_budget": "90000",
+        "currency": "EUR"
+      },
+      "expected": {
+        "candidates": [],
+        "excluded": [
+          "innowwide"
+        ]
+      }
+    },
+    {
+      "id": "uk-commercialisation",
+      "title": "UK grant-only route",
+      "description": "We are a software SME registered in the United Kingdom. We will commercialise innovative software technology. We request EUR 120,000 funding; total project cost is EUR 180,000.",
+      "expected_form": {
+        "country": "United Kingdom",
+        "company_size": "SME",
+        "industry": "software",
+        "activities": [
+          "commercialization"
+        ],
+        "requested_funding": "120000",
+        "project_budget": "180000",
+        "currency": "EUR"
+      },
+      "expected": {
+        "candidates": [
+          "eic-accelerator"
+        ],
+        "archive": [
+          "eic-transition"
+        ]
+      }
+    },
+    {
+      "id": "uk-recycling",
+      "title": "UK outside mapped LIFE coverage",
+      "description": "We are a recycling company registered in the United Kingdom. Our company is an SME. We will recycle manufacturing waste. We request EUR 120,000 funding; total project cost is EUR 180,000.",
+      "expected_form": {
+        "country": "United Kingdom",
+        "company_size": "SME",
+        "industry": "waste_management",
+        "activities": [
+          "circular_economy"
+        ],
+        "requested_funding": "120000",
+        "project_budget": "180000",
+        "currency": "EUR"
+      },
+      "expected": {
+        "candidates": [],
+        "archive": [],
+        "excluded": [
+          "life-circular"
+        ]
+      }
+    },
+    {
+      "id": "canada-rd",
+      "title": "Canadian research partner",
+      "description": "We are a software SME registered in Canada. We will develop a prototype. We request EUR 120,000 funding; total project cost is EUR 180,000.",
+      "expected_form": {
+        "country": "Canada",
+        "company_size": "SME",
+        "industry": "software",
+        "activities": [
+          "research_and_development"
+        ],
+        "requested_funding": "120000",
+        "project_budget": "180000",
+        "currency": "EUR"
+      },
+      "expected": {
+        "candidates": [],
+        "archive": [
+          "eurostars"
+        ],
+        "excluded": [
+          "eic-pathfinder-open",
+          "eic-pathfinder-challenges",
+          "eureka-network"
+        ]
+      }
+    },
+    {
+      "id": "us-rd",
+      "title": "Unmapped applicant country",
+      "description": "We are a software SME registered in the United States. We will develop a prototype. We request EUR 120,000 funding; total project cost is EUR 180,000.",
+      "expected_form": {
+        "country": "United States",
+        "company_size": "SME",
+        "industry": "software",
+        "activities": [
+          "research_and_development"
+        ],
+        "requested_funding": "120000",
+        "project_budget": "180000",
+        "currency": "EUR"
+      },
+      "expected": {
+        "candidates": [],
+        "archive": []
+      }
+    },
+    {
+      "id": "large-business",
+      "title": "Large enterprise outside pilot",
+      "description": "We are a large software enterprise registered in Ireland. We will commercialise innovative software technology. We request EUR 120,000 funding; total project cost is EUR 180,000.",
+      "expected_form": {
+        "country": "Ireland",
+        "company_size": "large",
+        "industry": "software",
+        "activities": [
+          "commercialization"
+        ],
+        "requested_funding": "120000",
+        "project_budget": "180000",
+        "currency": "EUR"
+      },
+      "expected": {
+        "candidates": [],
+        "archive": []
+      }
+    },
+    {
+      "id": "ordinary-machinery",
+      "title": "No invented innovation",
+      "description": "We are a manufacturing SME registered in Germany. We will replace machinery. We request EUR 120,000 funding; total project cost is EUR 180,000.",
+      "expected_form": {
+        "country": "Germany",
+        "company_size": "SME",
+        "industry": "manufacturing",
+        "activities": [
+          "machinery_replacement"
+        ],
+        "requested_funding": "120000",
+        "project_budget": "180000",
+        "currency": "EUR"
+      },
+      "expected": {
+        "candidates": [],
+        "archive": []
+      }
+    },
+    {
+      "id": "currency-unassessed",
+      "title": "No silent currency conversion",
+      "description": "We are a software SME registered in Poland. We will conduct a market feasibility study in Canada. We request PLN 300,000 funding; total project cost is PLN 400,000.",
+      "expected_form": {
+        "country": "Poland",
+        "company_size": "SME",
+        "industry": "software",
+        "activities": [
+          "export_promotion"
+        ],
+        "requested_funding": "300000",
+        "project_budget": "400000",
+        "currency": "PLN"
+      },
+      "expected": {
+        "candidates": [
+          "innowwide"
+        ],
+        "amount_unassessed": [
+          "innowwide"
+        ]
+      }
+    },
+    {
+      "id": "norway-energy",
+      "title": "Norway is not automatically a LIFE country",
+      "description": "We are a manufacturing SME registered in Norway. We will install energy-saving equipment. We request EUR 120,000 funding; total project cost is EUR 180,000.",
+      "expected_form": {
+        "country": "Norway",
+        "company_size": "SME",
+        "industry": "manufacturing",
+        "activities": [
+          "energy_efficiency"
+        ],
+        "requested_funding": "120000",
+        "project_budget": "180000",
+        "currency": "EUR"
+      },
+      "expected": {
+        "candidates": [],
+        "archive": [],
+        "excluded": [
+          "life-climate",
+          "life-clean-energy"
+        ]
+      }
+    },
+    {
+      "id": "iceland-recycling",
+      "title": "LIFE associated-country coverage",
+      "description": "We are a recycling company registered in Iceland. Our company is an SME. We will recycle manufacturing waste. We request EUR 120,000 funding; total project cost is EUR 180,000.",
+      "expected_form": {
+        "country": "Iceland",
+        "company_size": "SME",
+        "industry": "waste_management",
+        "activities": [
+          "circular_economy"
+        ],
+        "requested_funding": "120000",
+        "project_budget": "180000",
+        "currency": "EUR"
+      },
+      "expected": {
+        "candidates": [],
+        "archive": [
+          "life-circular"
+        ]
+      }
+    },
+    {
+      "id": "budget-not-request",
+      "title": "Large project cost does not replace request",
+      "description": "We are a software SME registered in Ireland. We will conduct a market feasibility study in Canada. We request EUR 60,000 funding; total project cost is EUR 1,000,000.",
+      "expected_form": {
+        "country": "Ireland",
+        "company_size": "SME",
+        "industry": "software",
+        "activities": [
+          "export_promotion"
+        ],
+        "requested_funding": "60000",
+        "project_budget": "1000000",
+        "currency": "EUR"
+      },
+      "expected": {
+        "candidates": [
+          "innowwide"
+        ]
+      }
+    },
+    {
+      "id": "portugal-research",
+      "title": "EU country beyond original dropdown",
+      "description": "We are a software SME registered in Portugal. We will develop a prototype. We request EUR 120,000 funding; total project cost is EUR 180,000.",
+      "expected_form": {
+        "country": "Portugal",
+        "company_size": "SME",
+        "industry": "software",
+        "activities": [
+          "research_and_development"
+        ],
+        "requested_funding": "120000",
+        "project_budget": "180000",
+        "currency": "EUR"
+      },
+      "expected": {
+        "candidates": [
+          "eic-pathfinder-challenges",
+          "eureka-network"
+        ],
+        "archive": [
+          "eic-pathfinder-open",
+          "eic-transition",
+          "eurostars"
+        ]
+      }
+    },
+    {
+      "id": "mixed-topics",
+      "title": "Partial topic coverage",
+      "description": "We are a manufacturing SME registered in Germany. We will commercialise innovative technology. We will replace machinery. We request EUR 120,000 funding; total project cost is EUR 180,000.",
+      "expected_form": {
+        "country": "Germany",
+        "company_size": "SME",
+        "industry": "manufacturing",
+        "activities": [
+          "commercialization",
+          "machinery_replacement"
+        ],
+        "requested_funding": "120000",
+        "project_budget": "180000",
+        "currency": "EUR"
+      },
+      "expected": {
+        "candidates": [
+          "eic-accelerator"
+        ],
+        "archive": [
+          "eic-transition"
+        ]
+      }
+    },
+    {
+      "id": "request-over-budget",
+      "title": "Invalid financial totals",
+      "description": "We are a software SME registered in Ireland. We will commercialise innovative software technology. We request EUR 200,000 funding; total project cost is EUR 180,000.",
+      "expected_form": {
+        "country": "Ireland",
+        "company_size": "SME",
+        "industry": "software",
+        "activities": [
+          "commercialization"
+        ],
+        "requested_funding": "200000",
+        "project_budget": "180000",
+        "currency": "EUR"
+      },
+      "expected": {},
+      "expected_errors": [
+        "requested_funding"
+      ]
+    },
+    {
+      "id": "zero-request",
+      "title": "Zero request rejected",
+      "description": "We are a software SME registered in Ireland. We will commercialise innovative software technology. We request EUR 0 funding; total project cost is EUR 180,000.",
+      "expected_form": {
+        "country": "Ireland",
+        "company_size": "SME",
+        "industry": "software",
+        "activities": [
+          "commercialization"
+        ],
+        "requested_funding": "0",
+        "project_budget": "180000",
+        "currency": "EUR"
+      },
+      "expected": {},
+      "expected_errors": [
+        "requested_funding"
+      ]
+    },
+    {
+      "id": "missing-details",
+      "title": "Missing facts stay missing",
+      "description": "I have a project idea and need help finding funding.",
+      "expected_form": {},
+      "expected_missing": [
+        "country",
+        "company_size",
+        "industry",
+        "activities",
+        "requested_funding",
+        "project_budget",
+        "currency"
+      ],
+      "expected_errors": [
+        "country",
+        "company_size",
+        "industry",
+        "activities",
+        "requested_funding",
+        "project_budget",
+        "currency"
+      ],
+      "expected": {}
+    }
+  ]
+}
