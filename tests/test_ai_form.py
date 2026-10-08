@@ -33,6 +33,41 @@ def test_unknown_industry_is_other_not_inferred_category():
     assert values['industry_other'] == 'bakery'
 
 
+@pytest.mark.parametrize('phrase', ['registered in', 'based in', 'headquartered in', 'incorporated in'])
+def test_explicit_company_country_takes_priority_over_project_country(phrase):
+    text = (f'We are a software SME {phrase} Ireland. We will conduct a market feasibility '
+            'study in Canada. We request EUR 60,000 funding; total project cost is EUR 86,000.')
+    values, evidence, missing, warnings = prepare(text,
+        country=suggestion('Canada', 'Canada'))
+    assert values['country'] == 'Ireland'
+    assert evidence['country'] == [f'{phrase} Ireland']
+    assert 'country' not in missing
+    assert not warnings
+
+
+def test_conflicting_company_countries_remain_unresolved():
+    text = 'Our company is registered in Ireland and incorporated in Canada.'
+    values, evidence, missing, _ = prepare(text, country=suggestion('Ireland', 'Ireland'))
+    assert 'country' not in values
+    assert 'country' not in evidence
+    assert 'country' in missing
+
+
+def test_project_based_elsewhere_does_not_conflict_with_company_registration():
+    text = 'Our company is registered in ireland. The feasibility study is based in Canada.'
+    values, evidence, missing, _ = prepare(text, country=suggestion('Canada', 'Canada'))
+    assert values['country'] == 'Ireland'
+    assert evidence['country'] == ['registered in ireland']
+    assert 'country' not in missing
+
+
+def test_negated_registration_does_not_resolve_ambiguous_countries():
+    text = 'We are not registered in Ireland. Our study will be in Canada.'
+    values, _, missing, _ = prepare(text, country=suggestion('Canada', 'Canada'))
+    assert 'country' not in values
+    assert 'country' in missing
+
+
 @pytest.mark.parametrize('text,fields', [
     ('Thirty mysterious purple clouds.', {'country': suggestion('Poland', 'Polish')}),
     ('We have 35 employees.', {'company_size': suggestion('SME', '35 employees')}),

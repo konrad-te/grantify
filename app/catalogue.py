@@ -91,6 +91,46 @@ def availability(programme, today):
     return 'unknown', 'Availability not verified'
 
 
+def fit_assessment(project, programme, matched, availability_status, amount_status):
+    """Score only facts represented in the catalogue; never predict approval.
+
+    The fixed 100-point scale is intentionally simple and visible in the UI:
+    country 20, SME scope 15, selected-activity coverage 35, comparable funding
+    cap 15, and call availability 15. Unknown data earns limited rather than
+    full credit so a superficially relevant programme cannot look fully checked.
+    """
+    country_ok = project.country.casefold() in {c.casefold() for c in programme.countries}
+    size_ok = project.company_size == 'SME'
+    activity_points = round(35 * len(matched) / len(project.activities))
+    amount_points = {'within_cap': 15, 'unknown': 5, 'over_cap': 0}[amount_status]
+    availability_points = {
+        'window': 15, 'upcoming': 8, 'unknown': 5, 'closed': 0, 'cancelled': 0,
+    }[availability_status]
+    breakdown = [
+        {'label': 'Company country', 'points': 20 if country_ok else 0, 'maximum': 20,
+         'detail': 'Covered by the reviewed country list.' if country_ok else 'Not covered by the reviewed country list.'},
+        {'label': 'Company size', 'points': 15 if size_ok else 0, 'maximum': 15,
+         'detail': 'SME fits this pilot.' if size_ok else 'Outside this startup and SME pilot.'},
+        {'label': 'Selected activities', 'points': activity_points, 'maximum': 35,
+         'detail': f'{len(matched)} of {len(project.activities)} selected activities match the programme topics.'},
+        {'label': 'Funding request', 'points': amount_points, 'maximum': 15,
+         'detail': ('Within the recorded comparable cap.' if amount_status == 'within_cap'
+                    else 'Above the recorded comparable cap.' if amount_status == 'over_cap'
+                    else 'No comparable verified cap is available.')},
+        {'label': 'Call availability', 'points': availability_points, 'maximum': 15,
+         'detail': {
+             'window': 'Within the recorded application window.',
+             'upcoming': 'A published application window is upcoming.',
+             'unknown': 'Current availability is not verified.',
+             'closed': 'The recorded application round is closed.',
+             'cancelled': 'The recorded application round was cancelled.',
+         }[availability_status]},
+    ]
+    score = sum(item['points'] for item in breakdown)
+    label = 'Strong known fit' if score >= 85 else 'Promising known fit' if score >= 70 else 'Limited known fit'
+    return score, label, breakdown
+
+
 def shortlist(project, programmes, today=None):
     today = today or current_date()
     groups = {'candidates': [], 'upcoming': [], 'archive': [], 'excluded': []}
@@ -105,25 +145,33 @@ def shortlist(project, programmes, today=None):
         if not matched:
             reasons.append('No overlap with the selected activity categories.')
         if p.max_award is None:
+            amount_status = 'unknown'
             amount_note = 'Funding amount not assessed: no comparable cash-award cap has been recorded.'
         elif project.currency != p.currency:
+            amount_status = 'unknown'
             amount_note = f'Funding amount not assessed: the published cap is in {p.currency}; no currency conversion is performed.'
         elif project.requested_funding > p.max_award:
+            amount_status = 'over_cap'
             reasons.append(f'Request exceeds the published maximum of {p.currency} {p.max_award:,.0f}.')
             amount_note = reasons[-1]
         else:
+            amount_status = 'within_cap'
             amount_note = 'Request does not exceed the recorded cap. Eligible costs, minimum amounts and co-funding are still unverified.'
         questions = [p.country_note, *p.checks]
         remaining = [ACTIVITIES[a] for a in project.activities if a not in p.activities]
         if remaining:
             questions.append('Other selected activities are not covered by these topic tags: ' + '; '.join(remaining) + '.')
         questions.append('Sector exclusions, eligible costs, aid limits and required own contribution need review in the official documentation.')
+        score, score_label, score_breakdown = fit_assessment(
+            project, p, matched, status, amount_status)
         row = {'programme': p, 'availability': status, 'status': label,
                'matched': [ACTIVITIES[a] for a in matched], 'questions': questions,
-               'amount_note': amount_note, 'reasons': reasons}
+               'amount_note': amount_note, 'reasons': reasons, 'score': score,
+               'score_label': score_label, 'score_breakdown': score_breakdown,
+               'unconfirmed_count': len(questions)}
         group = ('excluded' if reasons else 'archive' if status in {'closed', 'cancelled'}
                  else 'upcoming' if status == 'upcoming' else 'candidates')
         groups[group].append(row)
     for rows in groups.values():
-        rows.sort(key=lambda r: (-len(r['matched']), r['programme'].title.casefold(), r['programme'].id))
+        rows.sort(key=lambda r: (-r['score'], r['programme'].title.casefold(), r['programme'].id))
     return groups

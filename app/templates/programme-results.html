@@ -2,41 +2,63 @@
 {% set p = row.programme %}
 <article class="card tone-partial" data-programme-id="{{ p.id }}">
   <div class="card-heading"><h3>{{ p.title }}</h3><span class="badge">{{ row.status }}</span></div>
+  <div class="fit-overview">
+    <div><strong>{{ row.score }}<span>/100</span></strong><small>{{ row.score_label }}</small></div>
+    <progress value="{{ row.score }}" max="100" aria-label="Known-fit score: {{ row.score }} out of 100"></progress>
+  </div>
+  <p class="score-warning">Known fit, not approval probability · {{ row.unconfirmed_count }} {{ 'requirement' if row.unconfirmed_count == 1 else 'requirements' }} still unconfirmed</p>
   <p>{{ p.description }}</p>
-  <p class="hint">{{ p.instrument }} · Source reviewed: {{ p.reviewed_on }}</p>
+  <p class="hint">{{ p.instrument }}</p>
+  {% if row.availability == 'closed' %}<p class="hint">Applications closed {{ p.closes_on.strftime('%d %B %Y') }}.</p>{% endif %}
+  <details class="card-details"><summary>See score and missing requirements</summary>
+  <h4>Score breakdown</h4>
+  <dl class="score-breakdown">{% for check in row.score_breakdown %}
+    <div><dt>{{ check.label }}</dt><dd>{{ check.points }}/{{ check.maximum }}</dd><small>{{ check.detail }}</small></div>
+  {% endfor %}</dl>
   <h4>Why it appears</h4>
   <ul>{% for activity in row.matched %}<li>{{ activity }}</li>{% endfor %}</ul>
   <p>{{ row.amount_note }}</p>
   <p class="hint">Country is in this record’s reviewed coverage list; this does not confirm eligibility. <a href="{{ p.country_source_url }}" target="_blank" rel="noopener noreferrer">Country rules</a></p>
-  <div class="assessment"><strong>What still needs checking</strong>
+  <div class="assessment"><strong>Still unconfirmed</strong>
     <ul>{% for question in row.questions %}<li>{{ question }}</li>{% endfor %}</ul>
   </div>
   <dl>
     <div><dt>Published application window</dt><dd>{{ p.opens_on or 'Start not verified' }} → {{ p.closes_on or 'End not verified' }}</dd></div>
     <div><dt>Recorded maximum cash award</dt><dd>{% if p.max_award %}{{ p.currency }} {{ '{:,.0f}'.format(p.max_award) }}{% else %}Not assessed{% endif %}</dd></div>
   </dl>
-  <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer">Official source — conditions and applications (English)</a> · <a href="{{ p.schedule_source_url }}" target="_blank" rel="noopener noreferrer">Schedule source</a>
+  <p class="hint">Source reviewed: {{ p.reviewed_on }} · <a href="{{ p.schedule_source_url }}" target="_blank" rel="noopener noreferrer">Schedule source</a></p>
+  </details>
+  <a class="source-link" href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer">View programme <span aria-hidden="true">↗</span></a>
 </article>
 {% endmacro %}
 <section>
   <h2>Your funding shortlist</h2>
-  <p>Evaluated as of {{ reference_date }}{{ " (fixed demo snapshot)" if demo_mode else " (current-date mode)" }}.</p>
-  <p>Sorted by overlap with your selected activities. This is not a funding approval, an eligibility score or a guarantee that applications are accepted today.</p>
+  <p class="hint">Ranked by known fit, not likelihood of approval.</p>
+  <details class="compact-details"><summary>How scoring works</summary><p>The 100-point known-fit score compares facts the app can check: country (20), company size (15), selected activities (35), funding request (15), and call availability (15). Unknown data receives limited credit. It is not an eligibility percentage or approval prediction.</p><p>Programme-specific requirements remain listed as unconfirmed until you verify them at the official source. Evaluated as of {{ reference_date }}{{ " (fixed demo snapshot)" if demo_mode else "" }}.</p></details>
   <div class="result-summary" role="status">
-    <p><strong>{{ programme_groups.candidates | length }}</strong> topic matches to investigate</p>
+    <p><strong>{{ programme_groups.candidates | length }}</strong> potential matches</p>
     <p><strong>{{ programme_groups.upcoming | length }}</strong> upcoming</p>
     <p><strong>{{ programme_groups.archive | length }}</strong> closed or cancelled</p>
   </div>
   {% if not programme_groups.candidates and not programme_groups.upcoming %}
-  <p class="notice">No current or upcoming shortlist candidates for these answers. Check the archived matches and exclusion reasons below. Keep your project details accurate.</p>
+    {% if programme_groups.archive %}
+    {% set count = programme_groups.archive | length %}
+    <div class="notice" id="archived-match-message">
+      <strong>We found {{ count }} relevant {{ 'programme' if count == 1 else 'programmes' }}, but {{ 'its recorded application round is' if count == 1 else 'their recorded application rounds are' }} {{ 'closed or cancelled' if programme_groups.archive | selectattr('availability', 'equalto', 'cancelled') | list else 'closed' }}.</strong>
+      <p>This catalogue has no current or upcoming match. That does not mean your project cannot get funding.</p>
+      <a href="/?mode=demo&amp;example=market-study#description-entry">Try an example with an open call in the demo</a>
+    </div>
+    {% else %}
+    <p class="notice" id="no-match-message">No matching programmes in this catalogue. This is a limited selection, not a decision about your project's eligibility.</p>
+    {% endif %}
   {% endif %}
-  {% for key, heading in [('candidates', 'Topic matches — availability needs confirmation'), ('upcoming', 'Upcoming published calls')] %}
+  {% for key, heading in [('candidates', 'Potential matches'), ('upcoming', 'Upcoming published calls')] %}
     {% if programme_groups[key] %}<h2>{{ heading }}</h2>
     {% for row in programme_groups[key] %}{{ programme_card(row) }}{% endfor %}{% endif %}
   {% endfor %}
   {% if programme_groups.archive %}
-  <details><summary>Closed or cancelled calls with matching topics ({{ programme_groups.archive | length }})</summary>
-    <p>Reference only. These published calls are not open for new applications.</p>
+  <details id="archived-matches"{% if not programme_groups.candidates and not programme_groups.upcoming %} open{% endif %}><summary>Closed or cancelled calls with matching topics ({{ programme_groups.archive | length }})</summary>
+    <p>These calls are closed to new applications.</p>
     {% for row in programme_groups.archive %}{{ programme_card(row) }}{% endfor %}
   </details>{% endif %}
   {% if programme_groups.excluded %}

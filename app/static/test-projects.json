@@ -65,7 +65,7 @@
     },
     {
       "id": "recycling",
-      "title": "Recycling and water reuse",
+      "title": "Recycling — closed-call example",
       "description": "We are a recycling company registered in the Netherlands. Our company is an SME. We will recycle manufacturing waste. We will install water-saving equipment. We request EUR 400,000 funding; total project cost is EUR 700,000.",
       "expected_form": {
         "country": "Netherlands",
@@ -92,7 +92,9 @@
     },
     {
       "id": "market-study",
-      "title": "Overseas feasibility study",
+      "title": "Market study — open in demo",
+      "demo": true,
+      "explanation": "Innowwide should appear within its published application window in the 4 October 2026 demo snapshot. The EUR 60,000 request fits its recorded cap. Company age, overseas partner and eligible costs still need checking; this is not confirmed eligibility.",
       "description": "We are a software SME registered in Ireland. We will conduct a market feasibility study in Canada. We request EUR 60,000 funding; total project cost is EUR 86,000.",
       "expected_form": {
         "country": "Ireland",

@@ -28,7 +28,7 @@ def test_home_and_static_assets(client):
     page = client.get('/')
     assert page.status_code == 200
     assert 'Describe your project' in page.text
-    assert 'Skip this and fill in the form myself.' in page.text
+    assert 'Skip this and fill in the form myself' in page.text
     assert page.text.index('id="description-entry"') < page.text.index('id="funding-form"')
     for name in ['country', 'company_size', 'industry', 'activities', 'requested_funding',
                  'project_budget', 'currency', 'employees', 'outcomes']:
@@ -113,7 +113,7 @@ def test_two_supported_activities_rank_a_programme_covering_both_first(client, s
     submission['activities'] = ['water_efficiency', 'circular_economy']
     output = client.post('/match', data=submission).text.split('id="matching-output"')[1]
     assert output.index('data-programme-id="life-circular"') < output.index('data-programme-id="life-climate"')
-    assert 'What still needs checking' in output
+    assert 'Still unconfirmed' in output
     assert 'Funding amount not assessed' in output
 
 
@@ -167,14 +167,15 @@ def test_closed_call_is_shown_only_as_archive(client, submission, monkeypatch):
     monkeypatch.setattr(main, 'load_catalogue', lambda: [programme])
     page = client.post('/match', data=submission)
     assert 'Closed or cancelled calls with matching topics (1)' in page.text
-    assert 'No current or upcoming shortlist candidates' in page.text
+    assert 'We found 1 relevant programme' in page.text
+    assert 'id="archived-matches" open' in page.text
 
 
 def test_empty_catalogue_has_no_candidates(client, submission, monkeypatch):
     monkeypatch.setattr(main, 'load_catalogue', lambda: [])
     page = client.post('/match', data=submission)
     assert page.status_code == 200
-    assert 'No current or upcoming shortlist candidates' in page.text
+    assert 'No matching programmes in this catalogue' in page.text
 
 
 def test_preparation_requires_review_and_matches_like_manual(client, submission, monkeypatch):
@@ -217,9 +218,10 @@ def test_preparation_failure_preserves_escaped_description(client, monkeypatch):
     response = client.post('/prepare-profile', data={'description': '<script>alert(1)</script> My project'})
     assert response.status_code == 503
     assert 'Model unavailable.' in response.text
+    assert 'Unable to fill up the form because:<br>Model unavailable.' in response.text
     assert '&lt;script&gt;alert(1)&lt;/script&gt;' in response.text
     assert '<script>alert(1)</script>' not in response.text
-    assert 'fill in the form manually' in response.text
+    assert 'Your description is still here' not in response.text
 
 
 @pytest.mark.parametrize('description', ['', 'short', 'x' * 5001])

@@ -4,47 +4,49 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Gratify — Find funding</title>
   <meta name="theme-color" content="#171717">
-  <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}?v=catalogue-4">
-  <script src="{{ url_for('static', path='/app.js') }}?v=start-2" defer></script>
+  <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}?v=project-entry-7">
+  <script src="{{ url_for('static', path='/app.js') }}?v=project-entry-4" defer></script>
 </head>
 <body><main>
-  <header>
-    <h1>Find funding for your project</h1>
-    <p>European innovation and green-project funding for startups and SMEs. English descriptions and official English sources; country coverage varies by programme.</p>
-    <p class="hint">Pilot catalogue: 10 real programmes and call tracks. <a href="/catalogue{{ mode_query }}">Browse official sources and dates</a></p>
-  </header>
-  {% include "mode-info.html" %}
-  {% if demo_mode %}<details class="notice" open><summary>Try a presentation example</summary>
-    <p>Fictional projects with documented expectations. Load a description to try AI, or load an editable sample form without AI.</p>
-    {% for example in demo_examples %}<p><strong>{{ example.title }}</strong> · <a href="/?mode=demo&amp;example={{ example.id }}#description-entry">Load description</a> · <a href="/?mode=demo&amp;example={{ example.id }}&amp;prefill=yes#funding-form">Load sample form</a></p>{% endfor %}
-    {% if selected_example %}<p class="hint"><strong>Expected at the demo date:</strong> {{ selected_example.explanation }}</p>{% endif %}
+  {% if demo_mode %}{% include "mode-info.html" %}{% endif %}
+  {% if demo_mode %}<details class="compact-details"><summary>Sample forms (without AI)</summary>
+    {% for example in demo_examples %}<p><strong>{{ example.title }}</strong> · <a href="/?mode=demo&amp;example={{ example.id }}&amp;prefill=yes#funding-form">Load sample form</a></p>{% endfor %}
   </details>{% endif %}
   <section class="project-start" id="description-entry" aria-labelledby="description-heading">
-    <h2 id="description-heading">Describe your project</h2>
-    <p>Tell us about your company, what you want to do, how much funding you need, and the total project cost. We’ll prepare a form for you to review.</p>
+    <h1 id="description-heading" class="visually-hidden">Describe your project</h1>
     <form id="description-form" method="post" action="/prepare-profile{{ mode_query }}#profile-review">
       <label for="description">Company and project description</label>
-      <textarea id="description" name="description" rows="9" minlength="10" maxlength="5000" required placeholder="For example: We are a German manufacturing company planning to install energy-saving equipment…" aria-describedby="description-example description-privacy{% if preparation_error %} preparation-error{% endif %}">{{ description | default('') }}</textarea>
-      <details class="description-example"><summary>Need inspiration? See an example</summary><p class="hint" id="description-example">We are a German manufacturing SME with 35 employees. We request EUR 120,000 funding for a project with a total cost of EUR 180,000. We plan to install energy-saving equipment. We will reuse manufacturing waste.</p></details>
-      <p class="hint" id="description-privacy">You will review the suggested answers before searching. Your description is processed by the configured AI service and is not saved by Gratify.</p>
-      {% if preparation_error %}<p class="error" role="alert" id="preparation-error">{{ preparation_error }} Your description is still here. You can retry or <a href="#funding-form">fill in the form manually</a>.</p>{% endif %}
-      <button type="submit" id="prepare-button">Prepare my form</button><p id="prepare-status" role="status"></p>
+      <textarea id="description" name="description" rows="9" minlength="10" maxlength="5000" required placeholder="Describe your project&#10;&#10;For example: We are a German manufacturing SME with 35 employees. We’re seeking EUR 120,000 toward a EUR 180,000 project to install energy-saving equipment and reuse manufacturing waste." aria-describedby="example-heading{% if preparation_error %} preparation-error{% endif %}">{{ description | default('') }}</textarea>
+      <div class="example-picker" aria-labelledby="example-heading">
+        <p id="example-heading" class="example-heading">Try an example</p>
+        <div class="example-options">
+          {% for example in demo_examples %}<a class="example-option" href="/?{% if demo_mode %}mode=demo&amp;{% endif %}example={{ example.id }}#description-entry"{% if selected_example and selected_example.id == example.id %} aria-current="true"{% endif %}>{{ example.title }}</a>{% endfor %}
+        </div>
+        {% if selected_example %}<div class="example-expectation" id="example-expectation" role="status">
+          <strong>Expected result</strong>
+          <p>{{ selected_example.explanation }}</p>
+          <p class="hint">Reference: {{ example_date }} demo snapshot. {% if not demo_mode %}<a href="/?mode=demo&amp;example={{ selected_example.id }}#description-entry">Test with this fixed date</a>.{% endif %} Actual results depend on the reviewed form.</p>
+        </div>{% endif %}
+      </div>
+      {% if preparation_error %}<p class="error" role="alert" id="preparation-error">Unable to fill up the form because:<br>{{ preparation_error }}</p>{% endif %}
+      <div class="project-actions">
+        <button type="submit" id="prepare-button">Prepare my form</button>
+        <a class="secondary-button" href="#funding-form">Skip this and fill in the form myself</a>
+        <button class="secondary-button" id="upload-toggle" type="button" aria-expanded="{{ 'true' if upload_error else 'false' }}" aria-controls="upload-panel">Upload a project document</button>
+      </div>
+      <p id="prepare-status" role="status"></p>
     </form>
-    <p class="manual-skip"><a href="#funding-form">Skip this and fill in the form myself.</a></p>
-    <details class="upload-option" {% if upload_error %}open{% endif %}>
-      <summary>Or upload a project document</summary>
+    <div class="upload-panel" id="upload-panel"{% if not upload_error %} hidden{% endif %}>
       <form id="upload-form" method="post" action="/prepare-document{{ mode_query }}#profile-review" enctype="multipart/form-data">
         <label for="project_document">Choose a project document</label>
         <input id="project_document" type="file" name="project_document" accept=".pdf,.docx,.txt" required aria-describedby="upload-help{% if upload_error %} upload-error{% endif %}">
-        <p class="hint" id="upload-help">PDF, Word (.docx), or UTF-8 text. Maximum 5 MB and 5,000 characters of text; PDFs up to 30 pages. Scans need OCR first. Extracted text is sent to the configured Ollama service. Uploaded files are not retained.</p>
-        <p><a href="{{ url_for('static', path='/example-project.txt') }}" download="gratify-example-project.txt">Download example project document (.txt)</a></p>
+        <p class="hint" id="upload-help">PDF, DOCX or TXT · up to 5 MB and 5,000 characters. Text-based PDFs only, up to 30 pages. Text is processed by AI; files are not saved.</p>
         {% if upload_error %}<p class="error" role="alert" id="upload-error">{{ upload_error }} Select a file again, or paste the description above.</p>{% endif %}
         <button id="upload-button" type="submit">Prepare form from document</button><p id="upload-status" role="status"></p>
       </form>
-    </details>
-    {% if uploaded_filename %}<p class="notice">Read text from <strong>{{ uploaded_filename }}</strong>. The extracted text is available above for review and editing.</p>{% endif %}
+    </div>
+    {% if uploaded_filename %}<p class="notice">Loaded <strong>{{ uploaded_filename }}</strong>. Review the text above.</p>{% endif %}
   </section>
-  <aside class="demo-notice">Sources reviewed on 4 October 2026. Results are a shortlist by activity, not confirmation of eligibility. Closed and upcoming calls are shown separately. Country coverage, research partners, technology stage, eligible costs and own contribution still require review. This is a curated catalogue, not a live funding search. <a href="/static/test-projects.json" download>Download test projects and expected results</a>.</aside>
   {% macro error(key) %}
     {% if missing and key in missing %}<p class="field-error">Not confidently extracted — please enter {{ key | replace('_', ' ') }}.</p>{% endif %}
     {% if evidence and evidence.get(key) %}<div class="ai-evidence" data-evidence-for="{{ key }}"><strong>AI suggestion — review:</strong> {% for quote in evidence[key] %}<q>{{ quote }}</q>{{ '; ' if not loop.last }}{% endfor %}</div>{% endif %}
@@ -66,38 +68,38 @@
   <form id="funding-form" action="/match{{ mode_query }}#matching-output" method="post">
     {% if description %}<input type="hidden" name="draft_description" value="{{ description }}">{% endif %}
     {% if review_required %}<input type="hidden" name="review_required" value="yes">{% endif %}
-    {% if sample_form %}<section class="notice"><h2>Review the sample form</h2><p>These are authored presentation answers, not AI-generated suggestions. Edit them if needed and confirm before searching.</p></section>{% endif %}
+    {% if sample_form %}<section class="notice"><h2>Review the sample form</h2><p>Sample answers, not AI-generated suggestions. Review before searching.</p></section>{% endif %}
     {% if prepared %}<section class="notice" id="profile-review" tabindex="-1"><h2>Review your prepared form</h2>
-      <p>AI suggested answers for {{ evidence | length }} fields. Quotes were checked against your description, but the interpretation can still be wrong. Confirm or edit every answer.</p>
-      {% if missing %}<p><strong>Still needed:</strong> {% for key in missing %}<a href="#{{ key }}">{{ key | replace('_', ' ') | capitalize }}</a>{{ ', ' if not loop.last }}{% endfor %}.</p>{% else %}<p>All required fields have suggestions. Please check them before matching.</p>{% endif %}
+      <p>Check the AI suggestions and edit anything inaccurate.</p>
+      {% if missing %}<p><strong>Still needed:</strong> {% for key in missing %}<a href="#{{ key }}">{{ key | replace('_', ' ') | capitalize }}</a>{{ ', ' if not loop.last }}{% endfor %}.</p>{% else %}<p>All required fields have suggestions.</p>{% endif %}
       {% if preparation_warnings %}<ul>{% for warning in preparation_warnings %}<li>{{ warning }}</li>{% endfor %}</ul>{% endif %}
     </section>{% endif %}
-    <p class="hint">Fields marked * are required. Your answers remain editable after searching. Searches are not saved.</p>
+    <p class="hint">* Required</p>
     {% if field_errors %}<section class="error" role="alert" tabindex="-1" id="form-errors"><h2>Check these fields</h2><ul>
       {% for key, message in field_errors.items() %}<li><a href="#{{ key }}">{{ key | replace('_', ' ') | capitalize }}: {{ message }}</a></li>{% endfor %}
     </ul></section>{% endif %}
     <fieldset><legend>1. Your business</legend><div class="form-grid">
-      {{ select_field('country', 'Company country', 'Where your company is registered, not its target market. Each programme has a reviewed country list; unlisted countries require source review.') }}
-      {{ select_field('company_size', 'Company size', 'Use your recorded business size category. Employee count alone does not determine SME status.') }}
+      {{ select_field('country', 'Company country', 'Country of registration.') }}
+      {{ select_field('company_size', 'Company size', 'Use your official size category, not employee count alone.') }}
       {{ other_field('country', 'Country name') }}
-      {{ select_field('industry', 'Industry', 'Choose the sector that best describes your business.') }}
-      <div class="field"><label for="employees">Employee count (optional)</label><input id="employees" name="employees" type="number" min="0" max="999999999" step="1" value="{{ values.get('employees', '') }}" aria-describedby="help-employees{% if field_errors.get('employees') %} error-employees{% endif %}" aria-invalid="{{ 'true' if field_errors.get('employees') else 'false' }}"><p class="hint" id="help-employees">For context only; not used to establish SME status.</p>{{ error('employees') }}</div>
+      {{ select_field('industry', 'Industry', 'Your main business sector.') }}
+      <div class="field"><label for="employees">Employee count (optional)</label><input id="employees" name="employees" type="number" min="0" max="999999999" step="1" value="{{ values.get('employees', '') }}" aria-describedby="help-employees{% if field_errors.get('employees') %} error-employees{% endif %}" aria-invalid="{{ 'true' if field_errors.get('employees') else 'false' }}"><p class="hint" id="help-employees">Optional context.</p>{{ error('employees') }}</div>
       {{ other_field('industry', 'Describe your industry') }}
     </div></fieldset>
     <fieldset id="activities" aria-describedby="help-activities{% if field_errors.get('activities') %} error-activities{% endif %}"><legend>2. Planned activities *</legend>
-      <p class="hint" id="help-activities">Select all that apply. For machinery intended to save energy, choose energy-saving equipment. Choose Other if none fits; those activities will need assessment.</p>
+      <p class="hint" id="help-activities">Select all that apply.</p>
       <div class="choice-grid">{% for value, label in options.activities.items() %}<label class="choice"><input type="checkbox" name="activities" value="{{ value }}" {{ 'checked' if value in values.get('activities', []) }}><span>{{ label }}</span></label>{% endfor %}</div>
       {{ error('activities') }}{{ other_field('activities', 'Describe the other activity') }}
     </fieldset>
-    <fieldset id="outcomes"><legend>3. Intended outcomes (optional)</legend><p class="hint">These describe your objectives. These selections do not change the shortlist; matching uses your selected activities.</p>
+    <fieldset id="outcomes"><legend>3. Intended outcomes (optional)</legend><p class="hint">Optional context; does not affect matching.</p>
       <div class="choice-grid">{% for value, label in options.outcomes.items() %}<label class="choice"><input type="checkbox" name="outcomes" value="{{ value }}" {{ 'checked' if value in values.get('outcomes', []) }}><span>{{ label }}</span></label>{% endfor %}</div>
       {{ error('outcomes') }}{{ other_field('outcomes', 'Describe the other outcome') }}
     </fieldset>
     <fieldset><legend>4. Project funding</legend><div class="form-grid">
-      {% for key, label, help in [('requested_funding', 'Requested funding', 'The support amount you want. Only verified cash-award caps in the same currency are checked.'), ('project_budget', 'Total project cost', 'The full cost, including your own contribution. It must be at least the requested funding.')] %}
+      {% for key, label, help in [('requested_funding', 'Requested funding', 'How much support you need.'), ('project_budget', 'Total project cost', 'Including your own contribution.')] %}
       <div class="field"><label for="{{ key }}">{{ label }} *</label><input id="{{ key }}" name="{{ key }}" type="number" min="0.01" max="9999999999999.99" step="0.01" required value="{{ values.get(key, '') }}" placeholder="{{ '120000' if key == 'requested_funding' else '150000' }}" aria-invalid="{{ 'true' if field_errors.get(key) else 'false' }}" aria-describedby="help-{{ key }}{% if field_errors.get(key) %} error-{{ key }}{% endif %}"><p class="hint" id="help-{{ key }}">{{ help }}</p>{{ error(key) }}</div>
       {% endfor %}
-      {{ select_field('currency', 'Currency', 'Both amounts must use this currency. PLN and EUR are supported; amounts are not converted.') }}
+      {{ select_field('currency', 'Currency', 'Use the same currency for both amounts. No conversion.') }}
     </div></fieldset>
     {% if review_required %}<label class="choice review-confirmation"><input id="review_confirmed" type="checkbox" name="review_confirmed" value="yes" required><span>I have reviewed the proposed answers and corrected anything inaccurate.</span></label>{{ error('review_confirmed') }}{% endif %}
     <button id="submit-button" type="submit">Find funding</button><span id="submit-status" role="status"></span>
@@ -106,4 +108,5 @@
     {% if service_error %}<section class="error" role="alert"><h2>Could not complete matching</h2><p>{{ service_error }}</p></section>{% endif %}
     {% if programme_groups is defined %}{% include "programme-results.html" %}{% endif %}
   </div>
+  <footer class="page-footer"><a href="/?mode=demo">Presentation demo</a></footer>
 </main></body></html>

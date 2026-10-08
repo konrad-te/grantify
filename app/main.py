@@ -43,18 +43,23 @@ def demo_examples():
 
 
 def render(request, *, status=200, **context):
+    examples = demo_examples()
+    if 'selected_example' not in context:
+        context['selected_example'] = next(
+            (case for case in examples if case['description'] == context.get('description')), None)
     return templates.TemplateResponse(request=request, name="index.html", status_code=status,
         context={"options": OPTIONS, "values": {}, "field_errors": {},
-                 **mode_context(request), 'demo_examples': demo_examples(), **context})
+                 **mode_context(request), 'demo_examples': examples,
+                 'example_date': DEMO_DATE, **context})
 
 
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
-    if request.query_params.get('mode') == 'demo' and request.query_params.get('example'):
+    if request.query_params.get('example'):
         case = next((c for c in demo_examples() if c['id'] == request.query_params['example']), None)
         if case is None:
             raise StarletteHTTPException(status_code=404, detail='Unknown presentation example')
-        use_form = request.query_params.get('prefill') == 'yes'
+        use_form = request.query_params.get('mode') == 'demo' and request.query_params.get('prefill') == 'yes'
         return render(request, description=case['description'],
             values=case['expected_form'] if use_form else {},
             review_required=use_form, sample_form=use_form, selected_example=case)

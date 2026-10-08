@@ -79,6 +79,31 @@ CATEGORY_TERMS = {
 ACTION = r"\b(?:replac\w*|install\w*|buy\w*|purchas\w*|upgrad\w*|improv\w*|reduc\w*|develop\w*|build\w*|automat\w*|reus\w*|recycl\w*|introduc\w*|research\w*|sav\w*|lower\w*|increas\w*|prepar\w*|implement\w*|commerciali\w*|promot\w*|manufactur\w*|conduct\w*)\b"
 NEGATION = r"\b(?:not|no|never|without|instead|previously|formerly|might|maybe|possibly|ignore|pretend)\b|n['’]t\b"
 REQUIRED = ("country", "company_size", "industry", "activities", "requested_funding", "project_budget", "currency")
+COMPANY_COUNTRY_PHRASE = re.compile(
+    r"\b(?P<relation>registered|based|headquartered|incorporated)\s+in\s+(?:the\s+)?"
+    r"(?P<country>" + "|".join(re.escape(country) for country in sorted(
+        (country for country in OPTIONS["country"] if country != "other"), key=len, reverse=True)) + r")\b",
+    re.I,
+)
+
+
+def _company_country(description):
+    """Return a country only when explicit company-location phrases agree."""
+    matches = []
+    for match in COMPANY_COUNTRY_PHRASE.finditer(description):
+        prefix = re.split(r"[.!?;\n]", description[:match.start()])[-1]
+        if re.search(r"\b(?:project|study|activity|pilot|market|trial|fieldwork)\b[^,.]{0,35}$", prefix, re.I):
+            continue
+        if not _proof(description, Suggestion(value=match.group("country"), evidence=match.group())):
+            continue
+        country = next(country for country in OPTIONS["country"]
+                       if country.casefold() == match.group("country").casefold())
+        matches.append((country, match.group(), match.group("relation")))
+    registration = [match for match in matches if match[2].casefold() in {"registered", "incorporated"}]
+    if registration:
+        matches = registration
+    countries = {country.casefold() for country, _, _ in matches}
+    return matches[0][:2] if len(countries) == 1 else None, len(countries) > 1
 
 
 def extract_form(description: str) -> FormDraft:
@@ -87,7 +112,9 @@ def extract_form(description: str) -> FormDraft:
         "Return suggestions only for explicitly stated current facts. Each suggestion has a string value "
         "and a verbatim evidence excerpt of at most 14 words and 120 characters. Use null for missing, "
         "ambiguous, negated or hypothetical scalar facts and [] for missing lists. Never infer company "
-        "size from employee count, or currency from country. Use country names in English, size SME or large. "
+        "size from employee count, or currency from country. For country, prioritize where the company "
+        "is registered, based, headquartered or incorporated. A different project or target-market "
+        "country does not make the company country ambiguous. Use country names in English, size SME or large. "
         "Use the supplied category keys for industry, activities and outcomes. Include ALL explicitly "
         "planned activities. Include a planned action verb and its purpose in activity evidence. "
         "For each activity copy only its action phrase starting at the verb; do not add a subject or words from another clause. "
@@ -133,6 +160,7 @@ def _decimal(text):
 def prepare_form(description: str, draft: FormDraft):
     """Reject ungrounded suggestions, normalize form values, and expose gaps."""
     values, evidence, warnings = {}, {}, []
+    company_country, conflicting_company_countries = _company_country(description)
     for field in FormDraft.model_fields:
         raw = getattr(draft, field)
         items = raw if isinstance(raw, list) else [raw] if raw else []
@@ -143,13 +171,15 @@ def prepare_form(description: str, draft: FormDraft):
                 continue
             value = suggestion.value
             if field == "country":
+                if conflicting_company_countries or (company_country and value.casefold() != company_country[0].casefold()):
+                    continue
                 value = next((c for c in OPTIONS[field] if c.casefold() == value.casefold()), value)
                 pattern = COUNTRY_ALIASES.get(value.casefold(), re.escape(value))
                 if not re.search(rf"\b(?:{pattern})\b", proof, re.I):
                     continue
                 mentioned = {c for c in OPTIONS[field] if c != "other" and re.search(
                     rf"\b(?:{COUNTRY_ALIASES.get(c.casefold(), re.escape(c))})\b", description, re.I)}
-                if len(mentioned) > 1:
+                if len(mentioned) > 1 and not company_country:
                     warnings.append("More than one country was mentioned. Select where your company is registered.")
                     continue
                 if value not in OPTIONS[field]:
@@ -204,6 +234,9 @@ def prepare_form(description: str, draft: FormDraft):
             else:
                 values[field] = value
             evidence.setdefault(field, []).append(proof)
+
+    if company_country:
+        values["country"], evidence["country"] = company_country[0], [company_country[1]]
 
     # Use the same form validation as manual entry; do not prefill invalid numbers.
     pairs = [(k, item) for k, v in values.items() for item in (v if isinstance(v, list) else [v])]

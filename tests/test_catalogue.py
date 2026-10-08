@@ -68,8 +68,15 @@ def test_no_fictional_catalogue_or_brand_on_public_pages():
         assert page.status_code == home.status_code == 200
         assert 'class="brand"' not in home.text
         assert 'Learning MVP' not in home.text
-        assert 'European innovation' in home.text
-        assert '10 real' in page.text
+        assert 'European funding for startups and SMEs' not in home.text
+        assert 'Describe your project' in home.text
+        assert '10 programmes and call tracks' in page.text
+        for html in (home.text, page.text):
+            assert 'href="/static/test-projects.json"' not in html
+            assert 'Sources reviewed on 4 October' not in html
+        assert 'Current-date mode' not in home.text
+        assert 'Pilot catalogue:' not in home.text
+        assert '<details class="card-details"><summary>Eligibility' in page.text
         assert 'example.com' not in page.text
         for p in catalogue.load_catalogue():
             assert p.source_url in page.text
@@ -130,9 +137,9 @@ def test_demo_date_and_catalogue_do_not_follow_live_updates(monkeypatch):
         monkeypatch.setattr(main, 'load_catalogue', lambda: [])
         normal = client.get('/catalogue').text
         demo = client.get('/catalogue?mode=demo').text
-        assert '0 real funding' in normal
+        assert '0 programmes and call tracks' in normal
         assert '2030-01-01' in normal
-        assert '10 real funding' in demo
+        assert '10 programmes and call tracks' in demo
         assert 'fixed date 2026-10-04' in demo
         assert '2030-01-01' not in demo
         case = DATA['cases'][3]
@@ -178,3 +185,126 @@ def test_demo_mode_survives_preparation_errors_and_success(monkeypatch):
             assert 'fixed date 2026-10-04' in response.text
             assert 'action="/match?mode=demo#matching-output"' in response.text
         assert 'fixed date' not in client.get('/?mode=unknown').text
+
+
+@pytest.mark.parametrize('demo', [False, True])
+@pytest.mark.parametrize('case', [c for c in DATA['cases'] if c.get('demo')], ids=lambda c: c['id'])
+def test_visible_examples_load_text_and_expected_result_only(case, demo, monkeypatch):
+    def no_ai(*args):
+        raise AssertionError('Choosing an example must not invoke AI')
+    monkeypatch.setattr(ai_form, 'extract_form', no_ai)
+    prefix = '/?mode=demo&' if demo else '/?'
+    with TestClient(main.app) as client:
+        home = client.get(prefix).text
+        assert 'Try an example' in home
+        assert home.count('class="example-option"') == 4
+        assert 'id="example-expectation"' not in home
+        page = client.get(prefix + 'example=' + case['id']).text
+        assert case['description'] in page
+        assert case['explanation'] in page
+        assert 'Expected result' in page
+        assert 'Reference: 2026-10-04 demo snapshot' in page
+        assert 'aria-current="true"' in page
+        assert 'value="' + case['expected_form']['requested_funding'] + '"' not in page
+        assert 'Your funding shortlist' not in page
+        assert 'Prepare my form' in page
+        assert ('Demo · fixed date' in page) == demo
+
+
+def test_expected_outcome_is_retained_only_for_unchanged_example(monkeypatch):
+    monkeypatch.setattr(ai_form, 'extract_form', lambda text: ai_form.FormDraft())
+    with TestClient(main.app) as client:
+        description = DATA['cases'][0]['description']
+        response = client.post('/prepare-profile', data={'description': description})
+        assert 'id="example-expectation"' in response.text
+        edited = client.post('/prepare-profile', data={'description': description + ' Changed project.'})
+        assert 'id="example-expectation"' not in edited.text
+        assert client.get('/?example=unknown').status_code == 404
+        assert 'Review the sample form' not in client.get('/?example=software&prefill=yes').text
+
+
+def test_recycling_explains_closed_matches_and_expands_them():
+    case = next(c for c in DATA['cases'] if c['id'] == 'recycling')
+    with TestClient(main.app) as client:
+        page = client.post('/match?mode=demo', data=case['expected_form']).text
+        assert 'We found 2 relevant programmes' in page
+        assert 'their recorded application rounds are closed.' in page
+        assert 'Applications closed 22 September 2026.' in page
+        assert 'id="archived-matches" open' in page
+        assert 'does not mean your project cannot get funding' in page
+        assert 'mode=demo&amp;example=market-study' in page
+        assert 'id="no-match-message"' not in page
+
+
+def test_open_demo_example_has_a_published_window():
+    case = next(c for c in DATA['cases'] if c['id'] == 'market-study')
+    with TestClient(main.app) as client:
+        page = client.post('/match?mode=demo', data=case['expected_form']).text
+        assert 'data-programme-id="innowwide"' in page
+        assert 'Within published window' in page
+        assert 'id="archived-match-message"' not in page
+        assert 'id="no-match-message"' not in page
+
+
+def test_known_fit_score_is_transparent_and_not_eligibility_probability():
+    case = next(c for c in DATA['cases'] if c['id'] == 'market-study')
+    _, errors, project = read_form(form_data(case['expected_form']))
+    assert not errors
+    groups = catalogue.shortlist(project, catalogue.load_demo_catalogue(), AS_OF)
+    row = next(r for r in groups['candidates'] if r['programme'].id == 'innowwide')
+    assert row['score'] == 100
+    assert row['score_label'] == 'Strong known fit'
+    assert [(check['points'], check['maximum']) for check in row['score_breakdown']] == [
+        (20, 20), (15, 15), (35, 35), (15, 15), (15, 15)]
+    assert row['unconfirmed_count'] == len(row['questions']) == 5
+    with TestClient(main.app) as client:
+        page = client.post('/match?mode=demo', data=case['expected_form']).text
+        assert '100<span>/100</span>' in page
+        assert 'Known fit, not approval probability' in page
+        assert '5 requirements still unconfirmed' in page
+        assert 'How scoring works' in page
+        assert 'country (20)' in page
+        assert 'Selected activities' in page
+        assert '1 of 1 selected activities match' in page
+
+
+def test_unknown_amount_and_availability_do_not_receive_full_points():
+    case = next(c for c in DATA['cases'] if c['id'] == 'software')
+    _, errors, project = read_form(form_data(case['expected_form']))
+    assert not errors
+    groups = catalogue.shortlist(project, catalogue.load_demo_catalogue(), AS_OF)
+    row = next(r for r in groups['candidates'] if r['programme'].id == 'eic-accelerator')
+    assert row['score'] == 80
+    checks = {check['label']: check for check in row['score_breakdown']}
+    assert checks['Funding request']['points'] == 5
+    assert checks['Call availability']['points'] == 5
+    assert 'No comparable verified cap' in checks['Funding request']['detail']
+    assert 'not verified' in checks['Call availability']['detail']
+
+
+def test_partial_activity_coverage_reduces_score():
+    values = DATA['cases'][1]['expected_form']
+    _, errors, project = read_form(form_data(values))
+    assert not errors
+    groups = catalogue.shortlist(project, catalogue.load_demo_catalogue(), AS_OF)
+    challenge = next(r for r in groups['candidates'] if r['programme'].id == 'eic-pathfinder-challenges')
+    network = next(r for r in groups['candidates'] if r['programme'].id == 'eureka-network')
+    assert challenge['score'] == 63
+    assert network['score'] == 63
+    activity = next(check for check in challenge['score_breakdown'] if check['label'] == 'Selected activities')
+    assert activity['points'] == 18
+    assert activity['detail'].startswith('1 of 2')
+
+
+def test_candidates_are_ranked_by_known_fit_score_before_title():
+    case = next(c for c in DATA['cases'] if c['id'] == 'software')
+    _, errors, project = read_form(form_data(case['expected_form']))
+    assert not errors
+    base = next(p for p in catalogue.load_demo_catalogue() if p.id == 'eic-accelerator')
+    alphabetical_first = base.model_copy(update={'id': 'unknown', 'title': 'A programme'})
+    higher_score = base.model_copy(update={
+        'id': 'window', 'title': 'Z programme', 'opens_on': AS_OF,
+        'closes_on': AS_OF + timedelta(days=10), 'reviewed_on': AS_OF})
+    groups = catalogue.shortlist(project, [alphabetical_first, higher_score], AS_OF)
+    assert [row['programme'].id for row in groups['candidates']] == ['window', 'unknown']
+    assert [row['score'] for row in groups['candidates']] == [90, 80]

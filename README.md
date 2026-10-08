@@ -19,12 +19,12 @@ If a server was started without reload, restart it after changing code.
 
 Presentation mode has a visible banner and uses a **frozen catalogue and fixed reference date, 2026-10-04**. It never moves real deadlines forward. The separate current-date mode checks today's date in Europe/Warsaw against the manually maintained catalogue; it does not fetch live programme updates.
 
-Three English examples are available: software startup, innovative manufacturing, and recycling/water reuse.
+Four English examples are available directly below the description box: software startup, innovative manufacturing, recycling (closed-call example), and an overseas market study (open in the fixed demo).
 
 - **Load description** lets you demonstrate the real AI preparation flow.
 - **Load sample form** loads authored, editable example answers without AI. It is explicitly labelled as sample data, not AI output, and requires review before searching.
 - Results show why each programme appeared, what needs checking, and its official English source. Closed calls are in a separate archive.
-- The recycling example deliberately has only archived matches at the demo date. That is the correct result, not a broken search.
+- The recycling example deliberately has only archived matches at the demo date. The result explains the closed rounds and expands those matches automatically. The market-study example finds Innowwide within its published window at the fixed demo date, without claiming confirmed eligibility.
 - Mode stays active through preparation, uploads, validation errors, results and catalogue navigation. Switching modes starts a fresh form.
 
 See [the English presentation and testing guide](docs/PILOT_TESTS.md).
@@ -46,6 +46,8 @@ Descriptions are limited to 5,000 characters. Gratify does not persist descripti
 Upload PDF, Word `.docx`, or UTF-8 `.txt`: maximum 5 MB and 5,000 extracted characters; PDFs up to 30 pages. Scans need OCR first and encrypted PDFs are rejected. DOCX body paragraphs and tables are supported, not embedded images, headers or footers. Oversized text is rejected rather than truncated. Extracted text uses the same AI preparation and review process. Document content is untrusted data, not instructions.
 
 ## Matching rules and limitations
+
+Each result has a transparent **known-fit score out of 100**: country (20 points), company size (15), selected-activity coverage (35), funding request versus a comparable verified cap (15), and recorded call availability (15). Unknown caps or availability receive only 5 points in their category. Results are ranked by this score. A score—even 100/100—is not an eligibility percentage or approval probability; each card separately lists every programme-specific requirement that remains unconfirmed.
 
 1. The pilot focuses on startups and SMEs. Each record lists its **reviewed country coverage**. This is not a universal list of eligible countries: for example, EIC coverage is currently mapped only for EU countries and the UK, although other associated countries can qualify. Unmapped countries receive an explicit coverage explanation.
 2. Selected activities must overlap editorial topic tags. Research partners, specific challenge topics, technology stage, prior EU-funded research, sector and ownership restrictions still require review.

@@ -29,6 +29,14 @@ window.addEventListener('pageshow', () => {
   updateOtherFields();
 });
 updateOtherFields();
+// An edited example no longer has the authored expected outcome.
+document.querySelector('#description').addEventListener('input', () => {
+  const expected = document.querySelector('#example-expectation');
+  if (expected) expected.hidden = true;
+  document.querySelectorAll('.example-option[aria-current]').forEach(link => {
+    link.removeAttribute('aria-current');
+  });
+});
 const errors = document.querySelector('#form-errors');
 if (errors) errors.focus();
 const prepareButton = document.querySelector('#prepare-button');
@@ -41,6 +49,14 @@ window.addEventListener('pageshow', () => {
   prepareButton.disabled = false;
   prepareButton.textContent = 'Prepare my form';
   document.querySelector('#prepare-status').textContent = '';
+});
+const uploadToggle = document.querySelector('#upload-toggle');
+const uploadPanel = document.querySelector('#upload-panel');
+uploadToggle.addEventListener('click', () => {
+  const isOpen = uploadToggle.getAttribute('aria-expanded') === 'true';
+  uploadToggle.setAttribute('aria-expanded', String(!isOpen));
+  uploadPanel.hidden = isOpen;
+  if (!isOpen) document.querySelector('#project_document').focus();
 });
 form.addEventListener('input', event => {
   document.querySelectorAll('[data-evidence-for]').forEach(note => {
