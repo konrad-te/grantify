@@ -78,3 +78,26 @@ window.addEventListener('pageshow', () => {
   uploadButton.textContent = 'Prepare form from document';
   document.querySelector('#upload-status').textContent = '';
 });
+
+document.querySelectorAll('.unknown-choice input').forEach(unknown => {
+  const evidence = unknown.closest('.followup-question').querySelector('textarea');
+  const syncEvidence = () => {
+    if (unknown.checked) evidence.value = '';
+    evidence.readOnly = unknown.checked;
+    evidence.setAttribute('aria-disabled', String(unknown.checked));
+  };
+  unknown.addEventListener('change', syncEvidence);
+  evidence.addEventListener('input', () => {
+    if (evidence.value.trim()) unknown.checked = false;
+  });
+  syncEvidence();
+});
+document.querySelectorAll('.followup-form').forEach(reviewForm => {
+  reviewForm.addEventListener('submit', () => {
+    reviewForm.querySelectorAll('button').forEach(reviewButton => { reviewButton.disabled = true; });
+    const progress = reviewForm.querySelector('.review-progress');
+    if (progress) progress.textContent = reviewForm.querySelector('[name="review_method"]')?.value === 'ai'
+      ? 'Reviewing your evidence with AI. This can take up to two minutes.'
+      : 'Checking your project and preparing the next steps…';
+  });
+});

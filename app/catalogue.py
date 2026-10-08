@@ -14,6 +14,7 @@ from urllib.parse import urlparse
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.structured import ACTIVITIES
+from app.followups import QUESTIONS
 
 CATALOGUE_PATH = Path(__file__).parent / 'data' / 'programmes.json'
 DEMO_CATALOGUE_PATH = Path(__file__).parent / 'data' / 'demo-europe-2026-10-04.json'
@@ -94,7 +95,7 @@ def availability(programme, today):
 def fit_assessment(project, programme, matched, availability_status, amount_status):
     """Score only facts represented in the catalogue; never predict approval.
 
-    The fixed 100-point scale is intentionally simple and visible in the UI:
+    The fixed 100-point scale is used only for shortlist ordering:
     country 20, SME scope 15, selected-activity coverage 35, comparable funding
     cap 15, and call availability 15. Unknown data earns limited rather than
     full credit so a superficially relevant programme cannot look fully checked.
@@ -157,7 +158,8 @@ def shortlist(project, programmes, today=None):
         else:
             amount_status = 'within_cap'
             amount_note = 'Request does not exceed the recorded cap. Eligible costs, minimum amounts and co-funding are still unverified.'
-        questions = [p.country_note, *p.checks]
+        questions = [p.country_note, *(check for check in p.checks
+                     if project.country == 'United Kingdom' or not check.startswith('UK applicants'))]
         remaining = [ACTIVITIES[a] for a in project.activities if a not in p.activities]
         if remaining:
             questions.append('Other selected activities are not covered by these topic tags: ' + '; '.join(remaining) + '.')
@@ -168,9 +170,10 @@ def shortlist(project, programmes, today=None):
                'matched': [ACTIVITIES[a] for a in matched], 'questions': questions,
                'amount_note': amount_note, 'reasons': reasons, 'score': score,
                'score_label': score_label, 'score_breakdown': score_breakdown,
-               'unconfirmed_count': len(questions)}
+               'unconfirmed_count': len(questions), 'company_country': project.country}
         group = ('excluded' if reasons else 'archive' if status in {'closed', 'cancelled'}
                  else 'upcoming' if status == 'upcoming' else 'candidates')
+        row['followups'] = QUESTIONS.get(p.id, ()) if group in {'candidates', 'upcoming'} else ()
         groups[group].append(row)
     for rows in groups.values():
         rows.sort(key=lambda r: (-r['score'], r['programme'].title.casefold(), r['programme'].id))

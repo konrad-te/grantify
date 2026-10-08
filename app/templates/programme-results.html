@@ -1,40 +1,104 @@
 {% macro programme_card(row) %}
 {% set p = row.programme %}
-<article class="card tone-partial" data-programme-id="{{ p.id }}">
+<article id="programme-{{ p.id }}" class="card tone-partial" data-programme-id="{{ p.id }}">
   <div class="card-heading"><h3>{{ p.title }}</h3><span class="badge">{{ row.status }}</span></div>
-  <div class="fit-overview">
-    <div><strong>{{ row.score }}<span>/100</span></strong><small>{{ row.score_label }}</small></div>
-    <progress value="{{ row.score }}" max="100" aria-label="Known-fit score: {{ row.score }} out of 100"></progress>
+  {% if p.id == 'eic-accelerator' %}<p class="hint">EU support for small companies developing ambitious technology that has already been tested and could grow internationally.</p>{% endif %}
+  <p class="result-intro">{% if row.availability == 'closed' %}This recorded round has ended.{% elif row.availability == 'cancelled' %}This recorded call was cancelled.{% else %}A possible lead for your project. Your eligibility has not been confirmed.{% endif %}</p>
+  <div class="result-facts">
+    <div><h4>Why it appeared</h4><p>Your company is registered in {{ row.company_country }}, which this record covers. Your planned work overlaps with: {{ row.matched | join('; ') }}.</p></div>
+    <div><h4>What still needs checking</h4><p>{% if row.availability == 'unknown' %}We have not confirmed whether applications are open now. {% elif row.availability == 'upcoming' %}The published opening date is still ahead. {% elif row.availability == 'window' %}The recorded dates include today; check that applications are still being accepted. {% endif %}{{ row.amount_note }}</p></div>
   </div>
-  <p class="score-warning">Known fit, not approval probability · {{ row.unconfirmed_count }} {{ 'requirement' if row.unconfirmed_count == 1 else 'requirements' }} still unconfirmed</p>
-  <p>{{ p.description }}</p>
-  <p class="hint">{{ p.instrument }}</p>
   {% if row.availability == 'closed' %}<p class="hint">Applications closed {{ p.closes_on.strftime('%d %B %Y') }}.</p>{% endif %}
-  <details class="card-details"><summary>See score and missing requirements</summary>
-  <h4>Score breakdown</h4>
-  <dl class="score-breakdown">{% for check in row.score_breakdown %}
-    <div><dt>{{ check.label }}</dt><dd>{{ check.points }}/{{ check.maximum }}</dd><small>{{ check.detail }}</small></div>
-  {% endfor %}</dl>
-  <h4>Why it appears</h4>
-  <ul>{% for activity in row.matched %}<li>{{ activity }}</li>{% endfor %}</ul>
-  <p>{{ row.amount_note }}</p>
-  <p class="hint">Country is in this record’s reviewed coverage list; this does not confirm eligibility. <a href="{{ p.country_source_url }}" target="_blank" rel="noopener noreferrer">Country rules</a></p>
-  <div class="assessment"><strong>Still unconfirmed</strong>
+  {% if row.followups %}
+  <section class="followup-panel" aria-label="Questions about {{ p.title }}">
+    <h4>Check the evidence</h4>
+    <p>{% if p.id == 'eic-accelerator' %}We’ll review your project description and any extra details below. You can start now and answer the missing questions afterwards.{% else %}Give concrete details for {{ row.followups | length }} important questions. If you do not have the evidence, say so—the result will explain what is missing.{% endif %}</p>
+    {% if followup_programme_id is defined and followup_programme_id == p.id %}
+      {% if followup_error %}<p class="field-error" role="alert">{{ followup_error }}</p>{% endif %}
+      {% if followup_assessment %}<div class="followup-outcome" role="status">
+        <h4>{{ followup_assessment.heading }}</h4><p>{{ followup_assessment.summary }}</p>
+        {% if followup_assessment.supplied %}<h5>What your answers support</h5>
+          <div class="evidence-list">{% for q, evidence in followup_assessment.supplied %}<div>
+            <strong>{{ q.supported }}</strong><blockquote>{{ evidence }}</blockquote>
+          </div>{% endfor %}</div>
+        {% endif %}
+        {% if followup_assessment.unresolved %}<h5>Evidence still missing</h5><ul>{% for q in followup_assessment.unresolved %}<li>{{ q.missing }}</li>{% endfor %}</ul>{% endif %}
+        <h5>What still blocks a decision</h5><ul>{% for item in followup_assessment.remaining %}<li>{{ item }}</li>{% endfor %}</ul>
+        <div class="next-action"><strong>Best next step</strong><p>{{ followup_assessment.next_action }}</p></div>
+        <p class="hint">Use the <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer">official programme rules</a> to verify this assessment.</p>
+      </div>{% endif %}
+    {% endif %}
+    {% if readiness_review is defined and followup_programme_id == p.id %}
+    <div class="followup-outcome readiness-report" role="status">
+      <h4>{{ readiness_review.heading }}</h4><p>{{ readiness_review.summary }}</p>
+      <p class="hint">{{ readiness_review.method }}</p>
+      <div class="next-action"><strong>Your next step</strong><p>{{ readiness_review.next_action }}</p></div>
+      <div class="readiness-findings">{% for finding in readiness_review.findings %}
+        <section class="readiness-finding" data-area="{{ finding.key }}">
+          <h5>{{ finding.title }} <span class="evidence-status status-{{ finding.status }}">{{ finding.label }}</span></h5>
+          <p>{{ finding.explanation }}</p>
+          {% if finding.quotes %}<details class="evidence-quotes"><summary>Words used for this finding</summary>{% for quote in finding.quotes %}<blockquote>{{ quote }}</blockquote>{% endfor %}</details>{% endif %}
+          {% if finding.question %}<p class="next-question"><strong>Next question:</strong> {{ finding.question }}</p>{% endif %}
+        </section>
+      {% endfor %}</div>
+      <details class="followup-edit"><summary>Your preparation checklist</summary><ol>{% for task in readiness_review.tasks %}<li>{{ task }}</li>{% endfor %}</ol></details>
+      <details class="followup-edit"><summary>Programme checks still required</summary>
+        <ul>{% for item in readiness_review.remaining %}<li>{{ item }}</li>{% endfor %}</ul>
+        <p>{{ readiness_review.finance }}</p>
+        <p class="hint">Requirements reviewed {{ readiness_review.reviewed }} · <a href="{{ readiness_review.source }}" target="_blank" rel="noopener noreferrer">Official 2026 work programme, Accelerator award criteria</a>. This is a preparation review using your account; no documents or eligibility have been independently verified.</p>
+      </details>
+    </div>
+    {% endif %}
+    {% if followup_assessment is defined and followup_programme_id == p.id %}<details class="followup-edit"><summary>Edit my evidence</summary>{% endif %}
+    <form class="followup-form" method="post" action="/check-programme{{ mode_query }}#programme-{{ p.id }}">
+      <input type="hidden" name="programme_id" value="{{ p.id }}">
+      {% if description %}<input type="hidden" name="draft_description" value="{{ description }}">{% endif %}
+      {% if review_required %}<input type="hidden" name="review_required" value="yes">{% endif %}
+      {% for key, value in values.items() %}
+        {% if value is string %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% else %}{% for item in value %}<input type="hidden" name="{{ key }}" value="{{ item }}">{% endfor %}{% endif %}
+      {% endfor %}
+      {% if p.id == 'eic-accelerator' %}
+      <label for="review-method-{{ p.id }}">Review type</label>
+      <select id="review-method-{{ p.id }}" name="review_method">
+        <option value="instant">Instant preparation checks</option>
+        <option value="ai">Deeper AI interpretation (can take two minutes)</option>
+      </select>
+      <button type="submit">Review my project and next steps</button>
+      <p class="hint review-progress" role="status"></p>
+      <details class="followup-edit"><summary>{{ 'Answer the next questions or update my details' if readiness_review is defined else 'Add details before the review (optional)' }}</summary>
+      {% endif %}
+      {% for q in row.followups %}
+      {% set adaptive = namespace(prompt=q.prompt) %}
+      {% if readiness_review is defined and followup_programme_id == p.id %}{% for finding in readiness_review.findings %}{% if finding.key == q.key and finding.question %}{% set adaptive.prompt = finding.question %}{% endif %}{% endfor %}{% endif %}
+      <fieldset class="followup-question"><legend>{{ loop.index }}. {{ adaptive.prompt }}</legend>
+        <p class="hint">{{ q.why }}</p>
+        <label for="evidence-{{ p.id }}-{{ q.key }}">Your evidence</label>
+        <textarea id="evidence-{{ p.id }}-{{ q.key }}" name="evidence_{{ q.key }}" rows="3" {% if p.id != 'eic-accelerator' %}minlength="20"{% endif %} maxlength="800" placeholder="{{ q.example }}">{% if followup_programme_id is defined and followup_programme_id == p.id and followup_answers.get(q.key, {}).get('status') == 'supplied' %}{{ followup_answers[q.key].evidence }}{% endif %}</textarea>
+        {% if p.id != 'eic-accelerator' %}
+        <label class="unknown-choice"><input type="checkbox" name="unknown_{{ q.key }}" value="yes" {% if followup_programme_id is defined and followup_programme_id == p.id and followup_answers.get(q.key, {}).get('status') == 'unknown' %}checked{% endif %}><span>I don’t have this evidence yet</span></label>
+        {% endif %}
+      </fieldset>
+      {% endfor %}
+      {% if p.id == 'eic-accelerator' %}<button type="submit">Update my review</button></details>{% else %}<button type="submit">Assess this evidence</button>{% endif %}
+    </form>
+    {% if followup_assessment is defined and followup_programme_id == p.id %}</details>{% endif %}
+  </section>
+  {% endif %}
+  <details class="card-details"><summary>More rules and source details</summary>
+    <p>These points need checking in the official documents:</p>
     <ul>{% for question in row.questions %}<li>{{ question }}</li>{% endfor %}</ul>
-  </div>
-  <dl>
-    <div><dt>Published application window</dt><dd>{{ p.opens_on or 'Start not verified' }} → {{ p.closes_on or 'End not verified' }}</dd></div>
-    <div><dt>Recorded maximum cash award</dt><dd>{% if p.max_award %}{{ p.currency }} {{ '{:,.0f}'.format(p.max_award) }}{% else %}Not assessed{% endif %}</dd></div>
-  </dl>
-  <p class="hint">Source reviewed: {{ p.reviewed_on }} · <a href="{{ p.schedule_source_url }}" target="_blank" rel="noopener noreferrer">Schedule source</a></p>
+    <dl>
+      <div><dt>Published application window</dt><dd>{{ p.opens_on or 'Start not verified' }} → {{ p.closes_on or 'End not verified' }}</dd></div>
+      <div><dt>Recorded maximum cash award</dt><dd>{% if p.max_award %}{{ p.currency }} {{ '{:,.0f}'.format(p.max_award) }}{% else %}Not assessed{% endif %}</dd></div>
+    </dl>
+    <p class="hint">Source reviewed: {{ p.reviewed_on }} · <a href="{{ p.country_source_url }}" target="_blank" rel="noopener noreferrer">Country rules</a> · <a href="{{ p.schedule_source_url }}" target="_blank" rel="noopener noreferrer">Published dates</a></p>
   </details>
-  <a class="source-link" href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer">View programme <span aria-hidden="true">↗</span></a>
+  <a class="source-link" href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer">View official programme <span aria-hidden="true">↗</span></a>
 </article>
 {% endmacro %}
 <section>
   <h2>Your funding shortlist</h2>
-  <p class="hint">Ranked by known fit, not likelihood of approval.</p>
-  <details class="compact-details"><summary>How scoring works</summary><p>The 100-point known-fit score compares facts the app can check: country (20), company size (15), selected activities (35), funding request (15), and call availability (15). Unknown data receives limited credit. It is not an eligibility percentage or approval prediction.</p><p>Programme-specific requirements remain listed as unconfirmed until you verify them at the official source. Evaluated as of {{ reference_date }}{{ " (fixed demo snapshot)" if demo_mode else "" }}.</p></details>
+  <p class="hint">These are leads to investigate, not eligibility decisions. Checked against catalogue records as of {{ reference_date }}{{ ' (fixed demo snapshot)' if demo_mode else '' }}.</p>
   <div class="result-summary" role="status">
     <p><strong>{{ programme_groups.candidates | length }}</strong> potential matches</p>
     <p><strong>{{ programme_groups.upcoming | length }}</strong> upcoming</p>

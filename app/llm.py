@@ -75,7 +75,9 @@ def _structured_request(instructions: str, data: str, schema: type[OutputModel])
             raise LLMError("The AI could not complete this request. Try a clearer description or try again.")
         return schema.model_validate_json(content)
     except httpx.HTTPStatusError as exc:
-        if exc.response.status_code == 404:
+        if exc.response.status_code == 500 and "out-of-memory" in exc.response.text.lower():
+            message = "The local AI model could not fit in memory. Choose a smaller installed model in OLLAMA_MODEL, then try again. Your entered details remain below."
+        elif exc.response.status_code == 404:
             message = f"Ollama could not find model {model}. Run: ollama pull {model}"
         else:
             message = "Ollama rejected the request. Check that the local service and model are available."

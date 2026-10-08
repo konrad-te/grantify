@@ -1,5 +1,6 @@
 """Real-catalogue integration and authored acceptance examples; no AI required."""
 import json
+from html import unescape
 from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -81,7 +82,7 @@ def test_no_fictional_catalogue_or_brand_on_public_pages():
         for p in catalogue.load_catalogue():
             assert p.source_url in page.text
             assert p.title in page.text
-        assert len(client.get('/static/test-projects.json').json()['cases']) == 20
+        assert len(client.get('/static/test-projects.json').json()['cases']) == 21
 
 
 def test_pln_and_new_activity_evidence():
@@ -142,7 +143,7 @@ def test_demo_date_and_catalogue_do_not_follow_live_updates(monkeypatch):
         assert '10 programmes and call tracks' in demo
         assert 'fixed date 2026-10-04' in demo
         assert '2030-01-01' not in demo
-        case = DATA['cases'][3]
+        case = next(c for c in DATA['cases'] if c['id'] == 'market-study')
         page = client.post('/match?mode=demo', data=case['expected_form'])
         assert 'data-programme-id="innowwide"' in page.text
         assert 'Within published window' in page.text
@@ -157,7 +158,7 @@ def test_demo_examples_are_editable_and_explicitly_not_ai(case, monkeypatch):
     monkeypatch.setattr(ai_form, 'extract_form', no_ai)
     with TestClient(main.app) as client:
         description = client.get('/?mode=demo&example=' + case['id'])
-        assert case['description'] in description.text
+        assert case['description'] in unescape(description.text)
         assert 'Review the sample form' not in description.text
         page = client.get('/?mode=demo&prefill=yes&example=' + case['id'])
         assert 'not AI-generated suggestions' in page.text
@@ -196,12 +197,12 @@ def test_visible_examples_load_text_and_expected_result_only(case, demo, monkeyp
     prefix = '/?mode=demo&' if demo else '/?'
     with TestClient(main.app) as client:
         home = client.get(prefix).text
-        assert 'Try an example' in home
-        assert home.count('class="example-option"') == 4
+        assert 'Try a fictional example' in home
+        assert home.count('class="example-option"') == 5
         assert 'id="example-expectation"' not in home
         page = client.get(prefix + 'example=' + case['id']).text
-        assert case['description'] in page
-        assert case['explanation'] in page
+        assert case['description'] in unescape(page)
+        assert case['explanation'] in unescape(page)
         assert 'Expected result' in page
         assert 'Reference: 2026-10-04 demo snapshot' in page
         assert 'aria-current="true"' in page
@@ -246,7 +247,7 @@ def test_open_demo_example_has_a_published_window():
         assert 'id="no-match-message"' not in page
 
 
-def test_known_fit_score_is_transparent_and_not_eligibility_probability():
+def test_shortlist_explains_known_overlap_without_showing_a_false_eligibility_score():
     case = next(c for c in DATA['cases'] if c['id'] == 'market-study')
     _, errors, project = read_form(form_data(case['expected_form']))
     assert not errors
@@ -259,13 +260,82 @@ def test_known_fit_score_is_transparent_and_not_eligibility_probability():
     assert row['unconfirmed_count'] == len(row['questions']) == 5
     with TestClient(main.app) as client:
         page = client.post('/match?mode=demo', data=case['expected_form']).text
-        assert '100<span>/100</span>' in page
-        assert 'Known fit, not approval probability' in page
-        assert '5 requirements still unconfirmed' in page
-        assert 'How scoring works' in page
-        assert 'country (20)' in page
-        assert 'Selected activities' in page
-        assert '1 of 1 selected activities match' in page
+        assert 'Why it appeared' in page
+        assert 'What still needs checking' in page
+        assert 'Check the evidence' in page
+        assert 'When was the company legally established?' in page
+        assert 'I don’t have this evidence yet' in page
+        assert '100<span>/100</span>' not in page
+
+
+def test_followups_turn_evidence_and_unknowns_into_specific_next_steps(monkeypatch):
+    case = next(c for c in DATA['cases'] if c['id'] == 'software')
+    form = {
+        **case['expected_form'],
+        'programme_id': 'eic-accelerator',
+        'evidence_tested': 'Tested for six months at one wind farm and identified eight known faults.',
+        'evidence_advantage': 'Detected faults two weeks earlier than the monitoring system used by the farm.',
+        'evidence_market': '',
+        'unknown_market': 'yes',
+        'evidence_delivery': '',
+        'evidence_budget': '',
+        'review_method': 'ai',
+    }
+    from app.llm import LLMError
+    monkeypatch.setattr(main, 'review_project_ai', lambda *args: (_ for _ in ()).throw(
+        LLMError('The AI review is unavailable.')))
+    with TestClient(main.app) as client:
+        response = client.post('/check-programme?mode=demo', data=form)
+    assert response.status_code == 503
+    assert 'The AI review is unavailable.' in response.text
+    assert 'Tested for six months at one wind farm' in response.text
+    assert 'Promising lead' not in response.text
+    assert 'eligible for EIC Accelerator' not in response.text
+
+
+def test_complete_evidence_produces_a_concrete_but_cautious_assessment(monkeypatch):
+    case = next(c for c in DATA['cases'] if c['id'] == 'software')
+    form = {
+        **case['expected_form'],
+        'programme_id': 'eic-accelerator',
+        'evidence_tested': 'Tested for six months at one wind farm and identified eight known faults.',
+        'evidence_advantage': 'Detected faults two weeks earlier than the monitoring system used by the farm.',
+        'evidence_market': 'Two wind-farm operators signed pilot letters and one agreed to a paid trial.',
+        'evidence_delivery': '', 'evidence_budget': '',
+    }
+    monkeypatch.setattr(main, 'review_project', lambda *args: {
+        'heading': 'Build the evidence before preparing an application',
+        'summary': 'A useful project can still be a poor fit for this programme.',
+        'next_action': 'Collect independent field-test results.',
+        'findings': [], 'tasks': ['Collect field-test results.'], 'remaining': [],
+        'finance': 'Total cost: EUR 180000.', 'source': 'https://eic.ec.europa.eu/',
+        'reviewed': '2026-10-08',
+    })
+    with TestClient(main.app) as client:
+        response = client.post('/check-programme?mode=demo', data=form)
+    assert response.status_code == 200
+    assert 'Build the evidence before preparing an application' in response.text
+    assert 'Collect independent field-test results.' in response.text
+    assert 'Answer the next questions or update my details' in response.text
+    assert 'eligible for EIC Accelerator' not in response.text
+
+
+def test_followups_require_all_answers_and_only_a_shortlisted_programme():
+    case = next(c for c in DATA['cases'] if c['id'] == 'software')
+    form = {
+        **case['expected_form'],
+        'programme_id': 'eic-accelerator',
+        'evidence_tested': 'Tested at one wind farm for six months.',
+        'evidence_advantage': 'too short',
+        'evidence_market': '',
+    }
+    with TestClient(main.app) as client:
+        incomplete = client.post('/check-programme?mode=demo', data=form)
+        invalid = client.post('/check-programme?mode=demo', data={
+            **case['expected_form'], 'programme_id': 'innowwide'})
+    assert incomplete.status_code == 422
+    assert 'Use one answer per question' in incomplete.text
+    assert invalid.status_code == 400
 
 
 def test_unknown_amount_and_availability_do_not_receive_full_points():
@@ -283,7 +353,7 @@ def test_unknown_amount_and_availability_do_not_receive_full_points():
 
 
 def test_partial_activity_coverage_reduces_score():
-    values = DATA['cases'][1]['expected_form']
+    values = next(c for c in DATA['cases'] if c['id'] == 'manufacturing')['expected_form']
     _, errors, project = read_form(form_data(values))
     assert not errors
     groups = catalogue.shortlist(project, catalogue.load_demo_catalogue(), AS_OF)

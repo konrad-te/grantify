@@ -4,8 +4,8 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Gratify — Find funding</title>
   <meta name="theme-color" content="#171717">
-  <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}?v=project-entry-7">
-  <script src="{{ url_for('static', path='/app.js') }}?v=project-entry-4" defer></script>
+  <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}?v=readiness-2">
+  <script src="{{ url_for('static', path='/app.js') }}?v=readiness-2" defer></script>
 </head>
 <body><main>
   {% if demo_mode %}{% include "mode-info.html" %}{% endif %}
@@ -18,13 +18,14 @@
       <label for="description">Company and project description</label>
       <textarea id="description" name="description" rows="9" minlength="10" maxlength="5000" required placeholder="Describe your project&#10;&#10;For example: We are a German manufacturing SME with 35 employees. We’re seeking EUR 120,000 toward a EUR 180,000 project to install energy-saving equipment and reuse manufacturing waste." aria-describedby="example-heading{% if preparation_error %} preparation-error{% endif %}">{{ description | default('') }}</textarea>
       <div class="example-picker" aria-labelledby="example-heading">
-        <p id="example-heading" class="example-heading">Try an example</p>
+        <p id="example-heading" class="example-heading">Try a fictional example</p>
         <div class="example-options">
           {% for example in demo_examples %}<a class="example-option" href="/?{% if demo_mode %}mode=demo&amp;{% endif %}example={{ example.id }}#description-entry"{% if selected_example and selected_example.id == example.id %} aria-current="true"{% endif %}>{{ example.title }}</a>{% endfor %}
         </div>
         {% if selected_example %}<div class="example-expectation" id="example-expectation" role="status">
           <strong>Expected result</strong>
           <p>{{ selected_example.explanation }}</p>
+          <p><a href="/?mode=demo&amp;example={{ selected_example.id }}&amp;prefill=yes#funding-form">Use this example’s sample form</a> <span class="hint">Fictional sample answers; works without AI.</span></p>
           <p class="hint">Reference: {{ example_date }} demo snapshot. {% if not demo_mode %}<a href="/?mode=demo&amp;example={{ selected_example.id }}#description-entry">Test with this fixed date</a>.{% endif %} Actual results depend on the reviewed form.</p>
         </div>{% endif %}
       </div>

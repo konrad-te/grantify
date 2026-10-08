@@ -1,8 +1,5 @@
-Example fictional project for testing Gratify
+Example fictional project for trying Gratify
 
-We are a software startup registered in Ireland.
-Our company is an SME.
-We will commercialise innovative software technology.
-We request EUR 120,000 funding; total project cost is EUR 180,000.
+We are a small software company (SME) registered in Portugal. We built solar-powered forest cameras with AI software that detects smoke and warns local fire teams. Our prototype was tested in three forests and detected controlled fires within 90 seconds. Two municipalities expressed interest in paid pilots, but no agreements are signed yet. We will commercialise the technology by improving the detection model, running larger field trials and preparing to manufacture more cameras for southern Europe. We request EUR 120,000 funding. Total project cost is EUR 180,000; we plan to pay EUR 60,000 from company savings. We have not yet measured false alarms or compared our system with existing monitoring.
 
-Review all suggested form answers before searching.
+These figures are illustrative. Review every suggested answer before searching.

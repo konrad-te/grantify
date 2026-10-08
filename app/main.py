@@ -14,6 +14,8 @@ from app.documents import DocumentError, MAX_FILE_BYTES, extract_document
 from app.database import PROJECT_DIR
 from app.structured import OPTIONS, read_form
 from app.catalogue import load_catalogue, load_demo_catalogue, shortlist, DEMO_DATE
+from app.followups import assess_answers
+from app.readiness import review_project, review_project_ai
 
 load_dotenv(PROJECT_DIR / ".env")
 
@@ -139,3 +141,75 @@ async def find_funding(request: Request):
         return render(request, status=503, values=values,
             **review_context,
             service_error="Could not read the programme catalogue. Please try again.")
+
+
+@app.post("/check-programme", response_class=HTMLResponse)
+async def check_programme(request: Request):
+    """Narrow one shortlist lead using self-reported, source-backed answers."""
+    form = await request.form(max_fields=60, max_files=0)
+    values, errors, project = read_form(form)
+    description = str(form.get("draft_description", ""))[:5000]
+    review_context = {
+        "description": description,
+        "review_required": form.get("review_required") == "yes",
+    }
+    if errors:
+        return render(request, status=422, values=values, field_errors=errors, **review_context)
+    try:
+        mode = mode_context(request)
+        programmes = load_demo_catalogue() if mode["demo_mode"] else load_catalogue()
+        groups = shortlist(project, programmes, mode["reference_date"])
+    except (OSError, ValueError):
+        return render(request, status=503, values=values, **review_context,
+            service_error="Could not read the programme catalogue. Please try again.")
+    programme_id = str(form.get("programme_id", ""))
+    if len(form.getlist("programme_id")) != 1:
+        raise StarletteHTTPException(status_code=400, detail="Choose one programme")
+    row = next((item for group in ("candidates", "upcoming") for item in groups[group]
+                if item["programme"].id == programme_id), None)
+    if not row or not row["followups"]:
+        raise StarletteHTTPException(status_code=400, detail="No follow-up questions for this programme")
+    answers = {}
+    answer_errors = []
+    deep_review = programme_id == "eic-accelerator"
+    for question in row["followups"]:
+        evidence_field = f"evidence_{question.key}"
+        unknown_field = f"unknown_{question.key}"
+        evidence_values = form.getlist(evidence_field)
+        unknown_values = form.getlist(unknown_field)
+        evidence = str(evidence_values[0]).strip() if len(evidence_values) == 1 else ""
+        unknown = unknown_values == ["yes"]
+        answers[question.key] = {"status": "unknown" if unknown or not evidence else "supplied",
+                                 "evidence": evidence[:800]}
+        if len(evidence_values) != 1 or len(unknown_values) > 1:
+            answer_errors.append(question.prompt)
+        elif unknown and evidence:
+            answer_errors.append(question.prompt)
+        elif unknown:
+            answers[question.key] = {"status": "unknown", "evidence": ""}
+        elif (0 if deep_review else 20) <= len(evidence) <= 800:
+            answers[question.key] = {"status": "supplied", "evidence": evidence}
+        else:
+            answer_errors.append(question.prompt)
+    context = dict(values=values, programme_groups=groups, followup_programme_id=programme_id,
+                   followup_answers=answers, **review_context)
+    if answer_errors:
+        return render(request, status=422,
+                      followup_error=(
+                          "Use one answer per question, up to 800 characters. Leave an answer blank if you do not know."
+                          if deep_review else
+                          "For each question, provide at least 20 characters of evidence or "
+                          "choose “I don’t have this evidence yet.” Do not select both."
+                      ),
+                      **context)
+    if deep_review:
+        try:
+            use_ai = form.get("review_method") == "ai"
+            reviewer = review_project_ai if use_ai else review_project
+            review = await run_in_threadpool(reviewer, description, answers, project)
+        except llm.LLMError as exc:
+            return render(request, status=503, followup_error=str(exc), **context)
+        return render(request, readiness_review=review, **context)
+    return render(request,
+                  followup_assessment=assess_answers(programme_id, row["followups"], answers),
+                  **context)

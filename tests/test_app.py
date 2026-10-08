@@ -54,7 +54,7 @@ def test_structured_search_preserves_input_and_explains_results(client, submissi
     assert 'data-programme-id="life-climate"' in page.text
     assert 'data-programme-id="life-clean-energy"' in page.text
     assert 'Published call closed' in page.text
-    assert 'Why it appears' in page.text
+    assert 'Why it appeared' in page.text
     assert 'within the award range' not in page.text
     assert 'Mock source' not in page.text
     assert 'value="120000"' in page.text
@@ -113,7 +113,7 @@ def test_two_supported_activities_rank_a_programme_covering_both_first(client, s
     submission['activities'] = ['water_efficiency', 'circular_economy']
     output = client.post('/match', data=submission).text.split('id="matching-output"')[1]
     assert output.index('data-programme-id="life-circular"') < output.index('data-programme-id="life-climate"')
-    assert 'Still unconfirmed' in output
+    assert 'What still needs checking' in output
     assert 'Funding amount not assessed' in output
 
 
